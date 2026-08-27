@@ -1,0 +1,840 @@
+// EAPASER — Prisma schema
+// Run: npx prisma migrate dev --name init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// ENUMS
+// ---------------------------------------------------------------------------
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  MARKETPLACE_MANAGER
+  SCOUT_MANAGER
+  CONTENT_MANAGER
+  FINANCE
+  SUPPORT
+  MODERATOR
+  SEO_MANAGER
+  DEVELOPER
+  CUSTOMER
+  AFFILIATE
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+  BANNED
+}
+
+enum ProductType {
+  EA
+  ROBOT
+  INDICATOR
+  SIGNAL
+  VPS
+}
+
+enum ProductPlatform {
+  MT4
+  MT5
+  BOTH
+  OTHER
+}
+
+enum ProductStatus {
+  DRAFT
+  PENDING_REVIEW
+  CHANGES_REQUESTED
+  APPROVED
+  REJECTED
+  ARCHIVED
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  UNRATED
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  INITIALIZED
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+enum LicenseStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REPORTED
+}
+
+enum DeveloperApplicationStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum ScoutStatus {
+  DISCOVERED
+  RESEARCHING
+  QUALIFIED
+  CONTACTED
+  RESPONDED
+  NEGOTIATING
+  APPROVED
+  LISTED
+  SELLING
+  REJECTED
+}
+
+enum PayoutStatus {
+  REQUESTED
+  APPROVED
+  PROCESSING
+  PAID
+  REJECTED
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING
+  RESOLVED
+  CLOSED
+}
+
+enum CouponType {
+  PERCENTAGE
+  FIXED
+}
+
+enum PublishStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+// ---------------------------------------------------------------------------
+// USERS & AUTH
+// ---------------------------------------------------------------------------
+
+model User {
+  id                     String     @id @default(cuid())
+  name                   String
+  email                  String     @unique
+  passwordHash           String
+  role                   UserRole   @default(CUSTOMER)
+  status                 UserStatus @default(PENDING_VERIFICATION)
+  avatarUrl              String?
+  phone                  String?
+  emailVerifiedAt        DateTime?
+  twoFactorEnabled       Boolean    @default(false)
+  twoFactorSecret        String? // set once enrollment is confirmed
+  pendingTwoFactorSecret String? // set during enrollment, before the user confirms a code
+  twoFactorBackupCodes   String[]   @default([]) // hashed, single-use
+  lastLoginAt            DateTime?
+  createdAt              DateTime   @default(now())
+  updatedAt              DateTime   @updatedAt
+
+  permissions        UserPermission[]
+  sessions           Session[]
+  verificationTokens VerificationToken[]
+
+  developer            Developer?
+  developerApplication DeveloperApplication?
+  orders               Order[]
+  reviews              Review[]
+  wishlists            Wishlist[]
+  downloads            Download[]
+  licenses             License[]
+  supportTickets       SupportTicket[]       @relation("TicketCustomer")
+  assignedTickets      SupportTicket[]       @relation("TicketAssignee")
+  ticketMessages       TicketMessage[]
+  notifications        Notification[]
+  auditLogs            AuditLog[]
+  affiliate            Affiliate?
+  scoutProspects       ScoutProspect[]       @relation("ScoutAssignee")
+
+  @@index([email])
+  @@index([role])
+  @@index([status])
+}
+
+model Session {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  ipAddress String?
+  userAgent String?
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  purpose   String // EMAIL_VERIFY | PASSWORD_RESET
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, purpose])
+}
+
+model Permission {
+  id          String @id @default(cuid())
+  key         String @unique // e.g. manage_products, approve_products
+  description String
+
+  userPermissions UserPermission[]
+}
+
+model UserPermission {
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, permissionId])
+}
+
+// ---------------------------------------------------------------------------
+// DEVELOPERS
+// ---------------------------------------------------------------------------
+
+model Developer {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyName       String?
+  website           String?
+  bio               String?
+  logoUrl           String?
+  socialLinks       Json?
+  verified          Boolean  @default(false)
+  commissionRate    Decimal  @default(80.0) // percent paid to developer
+  payoutProviderRef String? // opaque reference to payout provider account, never raw bank details
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  products Product[]
+  payouts  Payout[]
+  coupons  Coupon[]
+
+  @@index([verified])
+}
+
+model DeveloperApplication {
+  id           String                     @id @default(cuid())
+  userId       String                     @unique
+  user         User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyName  String?
+  website      String?
+  portfolioUrl String?
+  message      String?
+  status       DeveloperApplicationStatus @default(SUBMITTED)
+  reviewNotes  String?
+  reviewedById String?
+  reviewedAt   DateTime?
+  createdAt    DateTime                   @default(now())
+  updatedAt    DateTime                   @updatedAt
+
+  @@index([status])
+}
+
+// ---------------------------------------------------------------------------
+// CATALOG
+// ---------------------------------------------------------------------------
+
+model ProductCategory {
+  id          String  @id @default(cuid())
+  name        String
+  slug        String  @unique
+  description String?
+  icon        String?
+  sortOrder   Int     @default(0)
+  active      Boolean @default(true)
+
+  products Product[]
+}
+
+model Product {
+  id                 String          @id @default(cuid())
+  name               String
+  slug               String          @unique
+  shortDescription   String
+  description        String
+  type               ProductType
+  categoryId         String
+  category           ProductCategory @relation(fields: [categoryId], references: [id])
+  developerId        String
+  developer          Developer       @relation(fields: [developerId], references: [id])
+  platform           ProductPlatform
+  price              Decimal
+  currency           String          @default("USD")
+  status             ProductStatus   @default(DRAFT)
+  featured           Boolean         @default(false)
+  verified           Boolean         @default(false)
+  ratingAverage      Decimal         @default(0)
+  ratingCount        Int             @default(0)
+  currentVersion     String?
+  requirements       String?
+  strategy           String?
+  riskLevel          RiskLevel       @default(UNRATED)
+  supportedMarkets   String[]        @default([])
+  supportedPairs     String[]        @default([])
+  supportedBrokers   String[]        @default([])
+  supportedPropFirms String[]        @default([])
+  screenshots        String[]        @default([])
+  videoUrls          String[]        @default([])
+  documentationUrl   String?
+  seoTitle           String?
+  seoDescription     String?
+  reviewNotes        String?
+  submittedAt        DateTime?
+  approvedAt         DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  versions           ProductVersion[]
+  licenses           License[]
+  orderItems         OrderItem[]
+  reviews            Review[]
+  wishlists          Wishlist[]
+  downloads          Download[]
+  coupons            Coupon[]
+  performanceRecords PerformanceRecord[]
+
+  @@index([status])
+  @@index([categoryId])
+  @@index([developerId])
+  @@index([featured])
+  @@index([type])
+}
+
+model ProductVersion {
+  id           String        @id @default(cuid())
+  productId    String
+  product      Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  version      String
+  releaseNotes String?
+  fileRef      String // opaque storage object key, never a public URL
+  releaseDate  DateTime      @default(now())
+  status       ProductStatus @default(PENDING_REVIEW)
+
+  @@unique([productId, version])
+  @@index([productId])
+}
+
+model PerformanceRecord {
+  id           String    @id @default(cuid())
+  productId    String
+  product      Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  source       String // e.g. "Developer submitted backtest", "MyFXBook live account"
+  sourceUrl    String?
+  periodStart  DateTime?
+  periodEnd    DateTime?
+  winRate      Decimal?
+  profitFactor Decimal?
+  maxDrawdown  Decimal?
+  tradeCount   Int?
+  verified     Boolean   @default(false)
+  verifiedById String?
+  verifiedAt   DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([productId])
+}
+
+// ---------------------------------------------------------------------------
+// LICENSING
+// ---------------------------------------------------------------------------
+
+model License {
+  id              String        @id @default(cuid())
+  licenseKey      String        @unique
+  productId       String
+  product         Product       @relation(fields: [productId], references: [id])
+  customerId      String
+  customer        User          @relation(fields: [customerId], references: [id])
+  activationLimit Int           @default(1)
+  activationCount Int           @default(0)
+  expiresAt       DateTime?
+  status          LicenseStatus @default(ACTIVE)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  activations LicenseActivation[]
+
+  @@index([customerId])
+  @@index([productId])
+  @@index([status])
+}
+
+model LicenseActivation {
+  id            String    @id @default(cuid())
+  licenseId     String
+  license       License   @relation(fields: [licenseId], references: [id], onDelete: Cascade)
+  activationRef String // hashed device/account identifier
+  activatedAt   DateTime  @default(now())
+  lastSeenAt    DateTime  @default(now())
+  deactivatedAt DateTime?
+
+  @@index([licenseId])
+}
+
+// ---------------------------------------------------------------------------
+// COMMERCE
+// ---------------------------------------------------------------------------
+
+model Order {
+  id                 String      @id @default(cuid())
+  orderNumber        String      @unique
+  customerId         String
+  customer           User        @relation(fields: [customerId], references: [id])
+  subtotal           Decimal
+  discount           Decimal     @default(0)
+  tax                Decimal     @default(0)
+  total              Decimal
+  currency           String      @default("USD")
+  status             OrderStatus @default(PENDING)
+  couponId           String?
+  coupon             Coupon?     @relation(fields: [couponId], references: [id])
+  paymentProviderRef String?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  items    OrderItem[]
+  payments Payment[]
+
+  @@index([customerId])
+  @@index([status])
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  unitPrice Decimal
+  quantity  Int     @default(1)
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model Payment {
+  id             String        @id @default(cuid())
+  orderId        String
+  order          Order         @relation(fields: [orderId], references: [id])
+  provider       String
+  transactionRef String        @unique
+  amount         Decimal
+  currency       String
+  status         PaymentStatus @default(INITIALIZED)
+  metadata       Json?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([orderId])
+  @@index([status])
+}
+
+model Coupon {
+  id           String     @id @default(cuid())
+  code         String     @unique
+  type         CouponType
+  amount       Decimal
+  productId    String?
+  product      Product?   @relation(fields: [productId], references: [id])
+  developerId  String?
+  developer    Developer? @relation(fields: [developerId], references: [id])
+  minimumOrder Decimal?
+  usageLimit   Int?
+  usageCount   Int        @default(0)
+  expiresAt    DateTime?
+  active       Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+
+  orders Order[]
+
+  @@index([code])
+}
+
+model Wishlist {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   User     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([customerId, productId])
+}
+
+model Download {
+  id           String   @id @default(cuid())
+  customerId   String
+  customer     User     @relation(fields: [customerId], references: [id])
+  productId    String
+  product      Product  @relation(fields: [productId], references: [id])
+  version      String
+  downloadedAt DateTime @default(now())
+
+  @@index([customerId])
+  @@index([productId])
+}
+
+// ---------------------------------------------------------------------------
+// REVIEWS
+// ---------------------------------------------------------------------------
+
+model Review {
+  id               String       @id @default(cuid())
+  customerId       String
+  customer         User         @relation(fields: [customerId], references: [id])
+  productId        String
+  product          Product      @relation(fields: [productId], references: [id])
+  rating           Int
+  title            String
+  content          String
+  verifiedPurchase Boolean      @default(false)
+  status           ReviewStatus @default(PENDING)
+  moderatedById    String?
+  moderatedAt      DateTime?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@unique([customerId, productId])
+  @@index([productId])
+  @@index([status])
+}
+
+// ---------------------------------------------------------------------------
+// AFFILIATES & PAYOUTS
+// ---------------------------------------------------------------------------
+
+model Affiliate {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  referralCode String   @unique
+  approved     Boolean  @default(false)
+  clicks       Int      @default(0)
+  conversions  Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  payouts Payout[]
+}
+
+model Payout {
+  id          String       @id @default(cuid())
+  developerId String?
+  developer   Developer?   @relation(fields: [developerId], references: [id])
+  affiliateId String?
+  affiliate   Affiliate?   @relation(fields: [affiliateId], references: [id])
+  amount      Decimal
+  commission  Decimal
+  netAmount   Decimal
+  status      PayoutStatus @default(REQUESTED)
+  paymentRef  String?
+  requestedAt DateTime     @default(now())
+  processedAt DateTime?
+
+  @@index([status])
+}
+
+// ---------------------------------------------------------------------------
+// EA SCOUT (internal CRM)
+// ---------------------------------------------------------------------------
+
+model ScoutProspect {
+  id           String      @id @default(cuid())
+  companyName  String
+  productName  String?
+  website      String?
+  email        String?
+  telegram     String?
+  socialLinks  Json?
+  platform     String?
+  strategy     String?
+  market       String?
+  askingPrice  Decimal?
+  source       String?
+  notes        String?
+  status       ScoutStatus @default(DISCOVERED)
+  assignedToId String?
+  assignedTo   User?       @relation("ScoutAssignee", fields: [assignedToId], references: [id])
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  activities ScoutActivity[]
+
+  @@index([status])
+  @@index([assignedToId])
+}
+
+model ScoutActivity {
+  id          String        @id @default(cuid())
+  prospectId  String
+  prospect    ScoutProspect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  type        String // NOTE | OUTREACH | RESPONSE | STATUS_CHANGE
+  content     String
+  createdById String?
+  createdAt   DateTime      @default(now())
+
+  @@index([prospectId])
+}
+
+// ---------------------------------------------------------------------------
+// DIRECTORIES
+// ---------------------------------------------------------------------------
+
+model Broker {
+  id            String        @id @default(cuid())
+  name          String
+  slug          String        @unique
+  description   String?
+  website       String?
+  platforms     String[]      @default([])
+  compatibility String?
+  status        PublishStatus @default(DRAFT)
+  featured      Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model PropFirm {
+  id           String        @id @default(cuid())
+  name         String
+  slug         String        @unique
+  description  String?
+  website      String?
+  rules        String?
+  accountSizes String[]      @default([])
+  pricingInfo  String?
+  platforms    String[]      @default([])
+  eaCompatible Boolean       @default(false)
+  status       PublishStatus @default(DRAFT)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model SignalProvider {
+  id          String        @id @default(cuid())
+  name        String
+  slug        String        @unique
+  description String?
+  riskInfo    String?
+  status      PublishStatus @default(DRAFT)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// CONTENT / CMS
+// ---------------------------------------------------------------------------
+
+model BlogPost {
+  id             String        @id @default(cuid())
+  title          String
+  slug           String        @unique
+  excerpt        String?
+  content        String
+  authorId       String?
+  category       String?
+  tags           String[]      @default([])
+  featuredImage  String?
+  seoTitle       String?
+  seoDescription String?
+  status         PublishStatus @default(DRAFT)
+  publishedAt    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([status])
+  @@index([slug])
+}
+
+model Page {
+  id             String        @id @default(cuid())
+  title          String
+  slug           String        @unique
+  contentBlocks  Json // structured content blocks, not raw executable code
+  seoTitle       String?
+  seoDescription String?
+  status         PublishStatus @default(DRAFT)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+model SeoSetting {
+  id            String  @id @default(cuid())
+  path          String  @unique
+  title         String
+  description   String
+  canonical     String?
+  robots        String  @default("index,follow")
+  ogTitle       String?
+  ogDescription String?
+  ogImage       String?
+  schemaJson    Json?
+}
+
+model Faq {
+  id        String  @id @default(cuid())
+  question  String
+  answer    String
+  category  String?
+  sortOrder Int     @default(0)
+  active    Boolean @default(true)
+}
+
+model Banner {
+  id        String    @id @default(cuid())
+  title     String
+  imageUrl  String
+  linkUrl   String?
+  placement String
+  active    Boolean   @default(true)
+  startsAt  DateTime?
+  endsAt    DateTime?
+}
+
+model Media {
+  id           String   @id @default(cuid())
+  filename     String
+  storageKey   String
+  mimeType     String
+  sizeBytes    Int
+  uploadedById String?
+  createdAt    DateTime @default(now())
+}
+
+model Redirect {
+  id         String @id @default(cuid())
+  fromPath   String @unique
+  toPath     String
+  statusCode Int    @default(301)
+}
+
+model Announcement {
+  id       String    @id @default(cuid())
+  message  String
+  active   Boolean   @default(true)
+  startsAt DateTime?
+  endsAt   DateTime?
+}
+
+// ---------------------------------------------------------------------------
+// SUPPORT
+// ---------------------------------------------------------------------------
+
+model SupportTicket {
+  id           String       @id @default(cuid())
+  customerId   String
+  customer     User         @relation("TicketCustomer", fields: [customerId], references: [id])
+  subject      String
+  status       TicketStatus @default(OPEN)
+  priority     String       @default("NORMAL")
+  assignedToId String?
+  assignedTo   User?        @relation("TicketAssignee", fields: [assignedToId], references: [id])
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  messages TicketMessage[]
+
+  @@index([status])
+  @@index([customerId])
+}
+
+model TicketMessage {
+  id          String        @id @default(cuid())
+  ticketId    String
+  ticket      SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId    String
+  author      User          @relation(fields: [authorId], references: [id])
+  content     String
+  internal    Boolean       @default(false)
+  attachments String[]      @default([])
+  createdAt   DateTime      @default(now())
+
+  @@index([ticketId])
+}
+
+// ---------------------------------------------------------------------------
+// NOTIFICATIONS / AUDIT / SETTINGS
+// ---------------------------------------------------------------------------
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  body      String
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, readAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id])
+  action     String
+  resource   String
+  resourceId String?
+  metadata   Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([actorId])
+  @@index([resource, resourceId])
+  @@index([createdAt])
+}
+
+model SystemSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
