@@ -4,12 +4,10 @@ import { Suspense } from "react";
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { createBrowserSupabaseClient } from "@/lib/supabase";
 
 function LoginForm() {
   const searchParams = useSearchParams();
   const next = searchParams.get("next") || "/dashboard";
-  const supabase = createBrowserSupabaseClient();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,19 +20,27 @@ function LoginForm() {
     setError(null);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      // ✅ USE YOUR EXISTING LOGIN API (which sets sb-access-token + sb-refresh-token)
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
       });
 
-      if (error) throw error;
+      const data = await res.json();
 
-      const role = data.user?.user_metadata?.role || "CUSTOMER";
+      if (!res.ok) {
+        throw new Error(data.error || "Invalid email or password");
+      }
+
+      // ✅ Determine redirect path based on role returned from the API
+      const role = data.user?.role || "CUSTOMER";
       const redirectPath = role === "ADMIN" || role === "SUPER_ADMIN" ? "/admin" : next;
 
+      // ✅ Force a full page reload so the server reads the cookies
       window.location.href = redirectPath;
     } catch (err: any) {
-      setError(err.message || "Invalid email or password");
+      setError(err.message || "Something went wrong.");
     } finally {
       setLoading(false);
     }
@@ -45,7 +51,9 @@ function LoginForm() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/">
-            <h1 className="text-4xl font-bold text-primaryBright cursor-pointer hover:opacity-80 transition">EAPASSER</h1>
+            <h1 className="text-4xl font-bold text-primaryBright cursor-pointer hover:opacity-80 transition">
+              EAPASSER
+            </h1>
           </Link>
           <p className="text-muted mt-2">Sign in to your account</p>
         </div>
@@ -93,7 +101,9 @@ function LoginForm() {
 
           <p className="mt-6 text-center text-sm text-muted">
             Don't have an account?{" "}
-            <Link href="/register" className="text-primaryBright hover:underline">Create one</Link>
+            <Link href="/register" className="text-primaryBright hover:underline">
+              Create one
+            </Link>
           </p>
         </div>
       </div>

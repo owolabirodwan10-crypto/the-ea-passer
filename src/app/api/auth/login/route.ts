@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
 
     const { email, password } = parsed.data;
 
+    // 1. Sign in with Supabase
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -29,6 +30,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // 2. Get the session
     const { data: sessionData } = await supabase.auth.getSession();
     const session = sessionData.session;
 
@@ -39,6 +41,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // 3. Create response with user data
     const response = NextResponse.json({
       user: {
         id: data.user.id,
@@ -48,10 +51,8 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // ✅ Set cookies with explicit path and maxAge
-    response.cookies.set({
-      name: "sb-access-token",
-      value: session.access_token,
+    // 4. Set the manual cookies that auth.ts expects
+    response.cookies.set("sb-access-token", session.access_token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
@@ -59,9 +60,7 @@ export async function POST(req: NextRequest) {
       maxAge: 60 * 60 * 24 * 7,
     });
 
-    response.cookies.set({
-      name: "sb-refresh-token",
-      value: session.refresh_token,
+    response.cookies.set("sb-refresh-token", session.refresh_token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
