@@ -1,4 +1,3 @@
-// src/app/login/page.tsx
 "use client";
 
 import { Suspense } from "react";
@@ -33,12 +32,14 @@ function LoginForm() {
       await supabase.auth.getSession();
 
       const role = data.user?.user_metadata?.role || "CUSTOMER";
+      
+      // ✅ Determine redirect path based on role and next param
       let redirectPath = next;
       if (role === "ADMIN" || role === "SUPER_ADMIN") {
         redirectPath = "/admin";
       }
 
-      // ✅ Use window.location to force a full page reload
+      // ✅ Force a full page reload
       window.location.href = redirectPath;
     } catch (err: any) {
       setError(err.message || "Invalid email or password");
