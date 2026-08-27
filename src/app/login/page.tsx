@@ -4,11 +4,12 @@ import { Suspense } from "react";
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
+import { createBrowserSupabaseClient } from "@/lib/supabase";
 
 function LoginForm() {
   const searchParams = useSearchParams();
   const next = searchParams.get("next") || "/dashboard";
+  const supabase = createBrowserSupabaseClient();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -28,18 +29,9 @@ function LoginForm() {
 
       if (error) throw error;
 
-      // ✅ Force session refresh
-      await supabase.auth.getSession();
-
       const role = data.user?.user_metadata?.role || "CUSTOMER";
-      
-      // ✅ Determine redirect path based on role and next param
-      let redirectPath = next;
-      if (role === "ADMIN" || role === "SUPER_ADMIN") {
-        redirectPath = "/admin";
-      }
+      const redirectPath = role === "ADMIN" || role === "SUPER_ADMIN" ? "/admin" : next;
 
-      // ✅ Force a full page reload
       window.location.href = redirectPath;
     } catch (err: any) {
       setError(err.message || "Invalid email or password");
@@ -53,9 +45,7 @@ function LoginForm() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/">
-            <h1 className="text-4xl font-bold text-primaryBright cursor-pointer hover:opacity-80 transition">
-              EAPASSER
-            </h1>
+            <h1 className="text-4xl font-bold text-primaryBright cursor-pointer hover:opacity-80 transition">EAPASSER</h1>
           </Link>
           <p className="text-muted mt-2">Sign in to your account</p>
         </div>
@@ -103,9 +93,7 @@ function LoginForm() {
 
           <p className="mt-6 text-center text-sm text-muted">
             Don't have an account?{" "}
-            <Link href="/register" className="text-primaryBright hover:underline">
-              Create one
-            </Link>
+            <Link href="/register" className="text-primaryBright hover:underline">Create one</Link>
           </p>
         </div>
       </div>

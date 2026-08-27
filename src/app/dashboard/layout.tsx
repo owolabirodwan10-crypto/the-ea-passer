@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { LayoutGrid, Package, KeyRound, User, LogOut } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
-import { supabase } from "@/lib/supabase";
+import { createBrowserSupabaseClient } from "@/lib/supabase";
 
 const NAV = [
   { href: "/dashboard", label: "Overview", icon: LayoutGrid },
@@ -25,7 +25,6 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-bg text-text">
-      {/* Sidebar */}
       <aside className="fixed top-0 left-0 h-full w-64 bg-surface border-r border-border p-4">
         <div className="mb-8">
           <h1 className="text-xl font-bold text-primaryBright">EAPASSER</h1>
@@ -48,6 +47,7 @@ export default async function DashboardLayout({
           })}
           <button
             onClick={async () => {
+              const supabase = createBrowserSupabaseClient();
               await supabase.auth.signOut();
               window.location.href = "/login";
             }}
@@ -59,7 +59,6 @@ export default async function DashboardLayout({
         </nav>
       </aside>
 
-      {/* Main content */}
       <main className="ml-64 p-8">{children}</main>
     </div>
   );

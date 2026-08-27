@@ -1,13 +1,13 @@
 "use client";
 
-import { Suspense } from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
+import { createBrowserSupabaseClient } from "@/lib/supabase";
 
-function RegisterForm() {
+export default function RegisterPage() {
   const router = useRouter();
+  const supabase = createBrowserSupabaseClient();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -81,9 +81,7 @@ function RegisterForm() {
         <div className="bg-surface p-8 rounded-card border border-border">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-muted mb-1">
-                Full Name
-              </label>
+              <label className="block text-sm font-medium text-muted mb-1">Full Name</label>
               <input
                 type="text"
                 value={name}
@@ -95,9 +93,7 @@ function RegisterForm() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-muted mb-1">
-                Email
-              </label>
+              <label className="block text-sm font-medium text-muted mb-1">Email</label>
               <input
                 type="email"
                 value={email}
@@ -109,9 +105,7 @@ function RegisterForm() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-muted mb-1">
-                Password
-              </label>
+              <label className="block text-sm font-medium text-muted mb-1">Password</label>
               <input
                 type="password"
                 value={password}
@@ -147,13 +141,5 @@ function RegisterForm() {
         </div>
       </div>
     </div>
-  );
-}
-
-export default function RegisterPage() {
-  return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-bg">Loading...</div>}>
-      <RegisterForm />
-    </Suspense>
   );
 }
