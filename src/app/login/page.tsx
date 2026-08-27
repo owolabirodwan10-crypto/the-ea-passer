@@ -1,3 +1,4 @@
+// src/app/login/page.tsx
 "use client";
 
 import { Suspense } from "react";
@@ -29,10 +30,15 @@ function LoginForm() {
 
       if (error) throw error;
 
+      // Force session refresh
       await supabase.auth.getSession();
 
       const role = data.user?.user_metadata?.role || "CUSTOMER";
-      const redirectPath = role === "ADMIN" || role === "SUPER_ADMIN" ? "/admin" : next;
+      // Determine redirect path
+      let redirectPath = next;
+      if (role === "ADMIN" || role === "SUPER_ADMIN") {
+        redirectPath = "/admin";
+      }
 
       router.push(redirectPath);
       router.refresh();
@@ -47,16 +53,18 @@ function LoginForm() {
     <div className="flex min-h-screen items-center justify-center bg-bg px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-primaryBright">EAPASSER</h1>
+          <Link href="/">
+            <h1 className="text-4xl font-bold text-primaryBright cursor-pointer hover:opacity-80 transition">
+              EAPASSER
+            </h1>
+          </Link>
           <p className="text-muted mt-2">Sign in to your account</p>
         </div>
 
         <div className="bg-surface p-8 rounded-card border border-border">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-muted mb-1">
-                Email
-              </label>
+              <label className="block text-sm font-medium text-muted mb-1">Email</label>
               <input
                 type="email"
                 value={email}
@@ -68,9 +76,7 @@ function LoginForm() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-muted mb-1">
-                Password
-              </label>
+              <label className="block text-sm font-medium text-muted mb-1">Password</label>
               <input
                 type="password"
                 value={password}

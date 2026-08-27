@@ -17,7 +17,6 @@ export async function POST(req: NextRequest) {
 
     const { email, password } = parsed.data;
 
-    // Sign in with Supabase
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -30,11 +29,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ✅ GET THE SESSION
+    // Get session
     const { data: sessionData } = await supabase.auth.getSession();
     const session = sessionData.session;
 
-    // ✅ CREATE RESPONSE WITH SESSION COOKIE
     const response = NextResponse.json({
       user: {
         id: data.user.id,
@@ -44,14 +42,14 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // ✅ SET THE SUPABASE SESSION COOKIE
+    // Set session cookies
     if (session) {
       response.cookies.set("sb-access-token", session.access_token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
         path: "/",
-        maxAge: 60 * 60 * 24 * 7, // 7 days
+        maxAge: 60 * 60 * 24 * 7,
       });
       response.cookies.set("sb-refresh-token", session.refresh_token, {
         httpOnly: true,
@@ -63,7 +61,6 @@ export async function POST(req: NextRequest) {
     }
 
     return response;
-
   } catch (error: any) {
     console.error("Login error:", error);
     return NextResponse.json(
