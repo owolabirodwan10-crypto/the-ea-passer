@@ -6,7 +6,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
-// Separate component that uses useSearchParams
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -22,64 +21,68 @@ function LoginForm() {
     setLoading(true);
     setError(null);
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) {
-      setError(error.message);
+      if (error) throw error;
+
+      await supabase.auth.getSession();
+
+      const role = data.user?.user_metadata?.role || "CUSTOMER";
+      const redirectPath = role === "ADMIN" || role === "SUPER_ADMIN" ? "/admin" : next;
+
+      router.push(redirectPath);
+      router.refresh();
+    } catch (err: any) {
+      setError(err.message || "Invalid email or password");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const role = data.user?.user_metadata?.role || "CUSTOMER";
-    const redirectPath = role === "ADMIN" || role === "SUPER_ADMIN" ? "/admin" : next;
-
-    router.push(redirectPath);
-    router.refresh();
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-brand-blue-charcoal px-4">
+    <div className="flex min-h-screen items-center justify-center bg-bg px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold gradient-text">EAPASSER</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">Sign in to your account</p>
+          <h1 className="text-3xl font-bold text-primaryBright">EAPASSER</h1>
+          <p className="text-muted mt-2">Sign in to your account</p>
         </div>
 
-        <div className="bg-white dark:bg-gray-900 p-8 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800">
+        <div className="bg-surface p-8 rounded-card border border-border">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-muted mb-1">
                 Email
               </label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-fluorescent-blue"
+                className="w-full px-4 py-2 rounded-lg bg-bg border border-border text-text placeholder-mutedSoft focus:outline-none focus:border-primaryBright transition"
                 placeholder="you@example.com"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-muted mb-1">
                 Password
               </label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-fluorescent-blue"
+                className="w-full px-4 py-2 rounded-lg bg-bg border border-border text-text placeholder-mutedSoft focus:outline-none focus:border-primaryBright transition"
                 placeholder="••••••••"
                 required
               />
             </div>
 
             {error && (
-              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-600 dark:text-red-400 text-sm">
+              <div className="p-3 bg-error/10 border border-error/20 rounded-lg text-error text-sm">
                 {error}
               </div>
             )}
@@ -87,15 +90,15 @@ function LoginForm() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 bg-brand-fluorescent-blue text-brand-blue-charcoal font-semibold rounded-lg hover:opacity-90 transition disabled:opacity-50"
+              className="w-full py-2.5 bg-primaryBright text-bg font-semibold rounded-lg hover:opacity-90 transition disabled:opacity-50"
             >
               {loading ? "Signing in..." : "Sign In"}
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
+          <p className="mt-6 text-center text-sm text-muted">
             Don't have an account?{" "}
-            <Link href="/register" className="text-brand-fluorescent-blue hover:underline">
+            <Link href="/register" className="text-primaryBright hover:underline">
               Create one
             </Link>
           </p>
@@ -105,10 +108,9 @@ function LoginForm() {
   );
 }
 
-// Main export with Suspense boundary
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center">Loading...</div>}>
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-bg">Loading...</div>}>
       <LoginForm />
     </Suspense>
   );
