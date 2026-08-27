@@ -1,14 +1,15 @@
 "use client";
 
 import type React from "react";
-
+import { Suspense } from "react";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CircularLogo } from "@/components/ui/CircularLogo";
 import { Button } from "@/components/ui/Button";
 
-export default function LoginPage() {
+// Move the main logic into a separate component that uses useSearchParams
+function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next") ?? "/dashboard";
@@ -164,5 +165,14 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <span className="mb-1.5 block text-xs font-medium text-muted">{label}</span>
       {children}
     </label>
+  );
+}
+
+// Main export with Suspense boundary
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center">Loading...</div>}>
+      <LoginContent />
+    </Suspense>
   );
 }
