@@ -3,12 +3,11 @@
 
 import { Suspense } from "react";
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next") || "/dashboard";
 
@@ -30,18 +29,17 @@ function LoginForm() {
 
       if (error) throw error;
 
-      // Force session refresh
+      // ✅ Force session refresh
       await supabase.auth.getSession();
 
       const role = data.user?.user_metadata?.role || "CUSTOMER";
-      // Determine redirect path
       let redirectPath = next;
       if (role === "ADMIN" || role === "SUPER_ADMIN") {
         redirectPath = "/admin";
       }
 
-      router.push(redirectPath);
-      router.refresh();
+      // ✅ Use window.location to force a full page reload
+      window.location.href = redirectPath;
     } catch (err: any) {
       setError(err.message || "Invalid email or password");
     } finally {
