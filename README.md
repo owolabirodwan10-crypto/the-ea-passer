@@ -190,3 +190,5 @@ available in this environment) found and fixed these real issues:
 None of this changes what was said before: this is thorough manual review,
 not a compiler run. Treat `npm run typecheck` in a real environment as the
 next real checkpoint, not a formality.
+#   t h e - e a - p a s s e r  
+ 
