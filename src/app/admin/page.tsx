@@ -1,70 +1,93 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { StatCard, StatusBadge, EmptyState } from "@/components/ui/Primitives";
-import { Activity } from "lucide-react";
+import { getCurrentUser } from "@/lib/auth";
 
-export default async function AdminDashboardPage() {
+export default async function AdminPage() {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    redirect("/login?next=/admin");
+  }
+
+  // Check if user is admin (either from Supabase metadata or Prisma)
+  const role = user.user_metadata?.role || "CUSTOMER";
+  if (role !== "ADMIN" && role !== "SUPER_ADMIN") {
+    redirect("/dashboard");
+  }
+
+  // Fetch real stats from database
   const [
-    userCount,
-    developerCount,
+    totalUsers,
+    totalProducts,
     pendingProducts,
-    approvedProducts,
-    orderCount,
-    paidOrders,
-    pendingPayouts,
-    pendingReviews,
-    recentAudit,
+    totalOrders,
+    totalRevenue,
   ] = await Promise.all([
     prisma.user.count(),
-    prisma.developer.count(),
+    prisma.product.count(),
     prisma.product.count({ where: { status: "PENDING_REVIEW" } }),
-    prisma.product.count({ where: { status: "APPROVED" } }),
     prisma.order.count(),
-    prisma.order.findMany({ where: { status: "PAID" }, select: { total: true } }),
-    prisma.payout.count({ where: { status: "REQUESTED" } }),
-    prisma.review.count({ where: { status: "PENDING" } }),
-    prisma.auditLog.findMany({ orderBy: { createdAt: "desc" }, take: 8, include: { actor: true } }),
+    prisma.order.aggregate({
+      where: { status: "PAID" },
+      _sum: { total: true },
+    }),
   ]);
 
-  const revenue = paidOrders.reduce((sum, o) => sum + Number(o.total), 0);
+  const revenue = totalRevenue._sum.total || 0;
 
   return (
-    <div>
-      <h1 className="font-display mb-1 text-2xl font-bold">Dashboard</h1>
-      <p className="mb-8 text-sm text-muted">Live figures from the database. Nothing here is estimated.</p>
-
-      <div className="mb-10 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Total revenue" value={`$${revenue.toFixed(0)}`} />
-        <StatCard label="Users" value={String(userCount)} />
-        <StatCard label="Developers" value={String(developerCount)} />
-        <StatCard label="Orders" value={String(orderCount)} />
-        <StatCard label="Approved products" value={String(approvedProducts)} />
-        <StatCard label="Pending review" value={String(pendingProducts)} hint={pendingProducts > 0 ? "Needs attention" : undefined} />
-        <StatCard label="Pending payouts" value={String(pendingPayouts)} />
-        <StatCard label="Pending reviews" value={String(pendingReviews)} />
+    <div className="p-6 space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-1">
+          Welcome back, {user.user_metadata?.name || "Admin"}.
+        </p>
       </div>
 
-      <h2 className="mb-4 text-[15px] font-semibold">Recent activity</h2>
-      {recentAudit.length === 0 ? (
-        <EmptyState icon={Activity} title="No activity yet" description="Actions across the platform will be logged here." />
-      ) : (
-        <div className="divide-y divide-borderSoft rounded-card border border-border bg-surface">
-          {recentAudit.map((log) => (
-            <div key={log.id} className="flex items-center justify-between px-5 py-3.5 text-[13px]">
-              <div>
-                <span className="font-medium">{log.action.replace(/_/g, " ")}</span>
-                <span className="ml-2 text-mutedSoft">{log.resource}</span>
-              </div>
-              <span className="text-mutedSoft">{log.actor?.name ?? "system"} · {log.createdAt.toLocaleString()}</span>
-            </div>
-          ))}
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-800">
+          <p className="text-sm text-gray-500 dark:text-gray-400">Total Users</p>
+          <p className="text-2xl font-bold">{totalUsers}</p>
         </div>
-      )}
+        <div className="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-800">
+          <p className="text-sm text-gray-500 dark:text-gray-400">Total Products</p>
+          <p className="text-2xl font-bold">{totalProducts}</p>
+        </div>
+        <div className="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-800">
+          <p className="text-sm text-gray-500 dark:text-gray-400">Pending Review</p>
+          <p className="text-2xl font-bold text-yellow-500">{pendingProducts}</p>
+        </div>
+        <div className="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-800">
+          <p className="text-sm text-gray-500 dark:text-gray-400">Revenue</p>
+          <p className="text-2xl font-bold text-green-500">${revenue.toFixed(2)}</p>
+        </div>
+      </div>
 
-      <div className="mt-8 flex gap-3">
-        <Link href="/admin/products" className="text-[13px] text-primaryBright hover:underline">
-          Review pending products →
-        </Link>
+      {/* Quick Actions */}
+      <div className="bg-white dark:bg-gray-900 p-6 rounded-xl border border-gray-200 dark:border-gray-800">
+        <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
+        <div className="flex flex-wrap gap-4">
+          <Link
+            href="/admin/products/new"
+            className="px-4 py-2 bg-brand-fluorescent-blue text-brand-blue-charcoal rounded-lg hover:opacity-90 transition"
+          >
+            Add Product
+          </Link>
+          <Link
+            href="/admin/products"
+            className="px-4 py-2 border border-brand-fluorescent-blue text-brand-fluorescent-blue rounded-lg hover:bg-brand-fluorescent-blue/10 transition"
+          >
+            Manage Products
+          </Link>
+          <Link
+            href="/admin/orders"
+            className="px-4 py-2 border border-brand-fluorescent-blue text-brand-fluorescent-blue rounded-lg hover:bg-brand-fluorescent-blue/10 transition"
+          >
+            View Orders
+          </Link>
+        </div>
       </div>
     </div>
   );

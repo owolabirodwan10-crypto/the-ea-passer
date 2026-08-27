@@ -9,21 +9,10 @@ const loginSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json().catch(() => null);
-    
-    if (!body) {
-      return NextResponse.json(
-        { error: "Invalid request body" },
-        { status: 400 }
-      );
-    }
-
+    const body = await req.json();
     const parsed = loginSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: "Invalid email or password format" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid input" }, { status: 400 });
     }
 
     const { email, password } = parsed.data;
@@ -35,35 +24,50 @@ export async function POST(req: NextRequest) {
     });
 
     if (error) {
-      console.error("Supabase login error:", error);
-      
-      if (error.message.includes("Email not confirmed")) {
-        return NextResponse.json(
-          { error: "Please verify your email before signing in." },
-          { status: 403 }
-        );
-      }
-      
       return NextResponse.json(
         { error: "Invalid email or password" },
         { status: 401 }
       );
     }
 
-    // Return user data directly from Supabase
-    return NextResponse.json({
+    // ✅ GET THE SESSION
+    const { data: sessionData } = await supabase.auth.getSession();
+    const session = sessionData.session;
+
+    // ✅ CREATE RESPONSE WITH SESSION COOKIE
+    const response = NextResponse.json({
       user: {
         id: data.user.id,
         email: data.user.email,
         name: data.user.user_metadata?.name || "",
         role: data.user.user_metadata?.role || "CUSTOMER",
       },
-    }, { status: 200 });
+    });
+
+    // ✅ SET THE SUPABASE SESSION COOKIE
+    if (session) {
+      response.cookies.set("sb-access-token", session.access_token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+      });
+      response.cookies.set("sb-refresh-token", session.refresh_token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 7,
+      });
+    }
+
+    return response;
 
   } catch (error: any) {
     console.error("Login error:", error);
     return NextResponse.json(
-      { error: error.message || "Internal server error" },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

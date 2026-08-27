@@ -1,127 +1,151 @@
 "use client";
 
-import type React from "react";
-
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { CircularLogo } from "@/components/ui/CircularLogo";
-import { Button } from "@/components/ui/Button";
+import { supabase } from "@/lib/supabase";
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState(false);
+  const [success, setSuccess] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    const res = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { name, role: "CUSTOMER" },
+        emailRedirectTo: `${window.location.origin}/dashboard`,
+      },
     });
-    const data = await res.json();
-    setLoading(false);
 
-    if (!res.ok) {
-      setError(data.error ?? "Could not create your account.");
+    if (error) {
+      setError(error.message);
+      setLoading(false);
       return;
     }
-    setDone(true);
+
+    setSuccess(true);
+    setLoading(false);
+
+    // If email confirmation is disabled, redirect immediately
+    if (data.user?.confirmed_at) {
+      router.push("/dashboard");
+    }
+  };
+
+  if (success) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-brand-blue-charcoal px-4">
+        <div className="w-full max-w-md text-center">
+          <div className="bg-white dark:bg-gray-900 p-8 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-500/20 flex items-center justify-center">
+              <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold mb-2">Check Your Email</h2>
+            <p className="text-gray-600 dark:text-gray-400">
+              We've sent a confirmation link to <strong>{email}</strong>.
+              Please check your inbox and click the link to activate your account.
+            </p>
+            <Link
+              href="/login"
+              className="mt-6 inline-block px-6 py-2 bg-brand-fluorescent-blue text-brand-blue-charcoal font-semibold rounded-lg hover:opacity-90 transition"
+            >
+              Go to Login
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-bg px-6 text-text">
-      <div className="w-full max-w-[380px]">
-        <Link href="/" className="mb-8 flex items-center justify-center gap-2.5">
-          <CircularLogo size={40} />
-          <span className="text-lg font-bold">
-            EAPA<span className="text-primaryBright">SER</span>
-          </span>
-        </Link>
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-brand-blue-charcoal px-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold gradient-text">EAPASSER</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">Create your account</p>
+        </div>
 
-        <div className="rounded-card border border-border bg-surface p-7">
-          {done ? (
-            <div className="text-center">
-              <h1 className="font-display mb-2 text-xl font-bold">Check your email</h1>
-              <p className="text-sm leading-relaxed text-muted">
-                If that email can be registered, we&apos;ve sent a verification link. Confirm it to
-                activate your account, then sign in.
-              </p>
-              <Link href="/login" className="mt-5 inline-block text-sm text-primaryBright hover:underline">
-                Back to sign in
-              </Link>
+        <div className="bg-white dark:bg-gray-900 p-8 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Full Name
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-fluorescent-blue"
+                placeholder="John Doe"
+                required
+              />
             </div>
-          ) : (
-            <>
-              <h1 className="font-display mb-1 text-xl font-bold">Create your account</h1>
-              <p className="mb-6 text-sm text-muted">Browse the marketplace and manage licenses.</p>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <Field label="Full name">
-                  <input
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-bg px-3.5 py-2.5 text-sm outline-none focus:border-primary/50"
-                  />
-                </Field>
-                <Field label="Email">
-                  <input
-                    type="email"
-                    required
-                    autoComplete="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-bg px-3.5 py-2.5 text-sm outline-none focus:border-primary/50"
-                  />
-                </Field>
-                <Field label="Password">
-                  <input
-                    type="password"
-                    required
-                    minLength={10}
-                    autoComplete="new-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-bg px-3.5 py-2.5 text-sm outline-none focus:border-primary/50"
-                  />
-                  <span className="mt-1 block text-[11px] text-mutedSoft">
-                    At least 10 characters, with a letter and a number or symbol.
-                  </span>
-                </Field>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Email
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-fluorescent-blue"
+                placeholder="you@example.com"
+                required
+              />
+            </div>
 
-                {error && <p className="text-[13px] text-error">{error}</p>}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Password
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-fluorescent-blue"
+                placeholder="Min 6 characters"
+                required
+                minLength={6}
+              />
+            </div>
 
-                <Button type="submit" className="w-full justify-center" disabled={loading}>
-                  {loading ? "Creating account..." : "Create account"}
-                </Button>
-              </form>
+            {error && (
+              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-600 dark:text-red-400 text-sm">
+                {error}
+              </div>
+            )}
 
-              <p className="mt-5 text-center text-[13px] text-muted">
-                Already have an account?{" "}
-                <Link href="/login" className="text-primaryBright hover:underline">
-                  Sign in
-                </Link>
-              </p>
-            </>
-          )}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-2.5 bg-brand-fluorescent-blue text-brand-blue-charcoal font-semibold rounded-lg hover:opacity-90 transition disabled:opacity-50"
+            >
+              {loading ? "Creating account..." : "Create Account"}
+            </button>
+          </form>
+
+          <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
+            Already have an account?{" "}
+            <Link href="/login" className="text-brand-fluorescent-blue hover:underline">
+              Sign in
+            </Link>
+          </p>
         </div>
       </div>
     </div>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="block">
-      <span className="mb-1.5 block text-xs font-medium text-muted">{label}</span>
-      {children}
-    </label>
   );
 }
