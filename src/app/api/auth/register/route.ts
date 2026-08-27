@@ -2,97 +2,93 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
-import { hashPassword, isPasswordStrongEnough } from "@/server/auth/password";
-import { isRateLimited } from "@/server/auth/session";
-import { recordAuditLog } from "@/server/services/audit";
-import { notifyAdminTelegram } from "@/server/telegram/notify";
-import { sendEmail } from "@/server/email/provider";
+import { supabase } from "@/lib/supabase";
 
 const registerSchema = z.object({
   name: z.string().min(2).max(80),
   email: z.string().email(),
-  password: z.string().min(10),
+  password: z.string().min(6),
 });
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get("x-forwarded-for") ?? "unknown";
+  try {
+    const body = await req.json().catch(() => null);
+    
+    if (!body) {
+      return NextResponse.json(
+        { error: "Invalid request body" },
+        { status: 400 }
+      );
+    }
 
-  if (isRateLimited(`register:${ip}`)) {
+    const parsed = registerSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid input.", details: parsed.error.flatten() },
+        { status: 400 }
+      );
+    }
+
+    const { name, email, password } = parsed.data;
+
+    // Check if user already exists
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      return NextResponse.json(
+        { error: "User already exists. Please sign in." },
+        { status: 400 }
+      );
+    }
+
+    // Create user in Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { name, role: "CUSTOMER" },
+      },
+    });
+
+    if (authError) {
+      console.error("Supabase auth error:", authError);
+      return NextResponse.json(
+        { error: authError.message || "Failed to create account" },
+        { status: 400 }
+      );
+    }
+
+    if (!authData.user) {
+      return NextResponse.json(
+        { error: "Failed to create user" },
+        { status: 500 }
+      );
+    }
+
+    // Create user in Prisma database
+    const user = await prisma.user.create({
+      data: {
+        id: authData.user.id,
+        name,
+        email,
+        passwordHash: "supabase-auth-managed", // Password is managed by Supabase
+        role: "CUSTOMER",
+        status: authData.user.confirmed_at ? "ACTIVE" : "PENDING_VERIFICATION",
+        emailVerifiedAt: authData.user.confirmed_at || null,
+      },
+    });
+
+    // Return success
+    return NextResponse.json({
+      success: true,
+      user: { id: user.id, name: user.name, email: user.email },
+    }, { status: 201 });
+
+  } catch (error: any) {
+    console.error("Registration error:", error);
+    
     return NextResponse.json(
-      { error: "Too many attempts. Try again later." },
-      { status: 429 }
+      { error: error.message || "Internal server error" },
+      { status: 500 }
     );
   }
-
-  const body = await req.json().catch(() => null);
-  const parsed = registerSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Invalid input.", details: parsed.error.flatten() },
-      { status: 400 }
-    );
-  }
-
-  const { name, email, password } = parsed.data;
-
-  if (!isPasswordStrongEnough(password)) {
-    return NextResponse.json(
-      { error: "Password must be at least 10 characters and include a letter and a number or symbol." },
-      { status: 400 }
-    );
-  }
-
-  const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) {
-    // Do not reveal whether the account exists; respond identically either way.
-    return NextResponse.json(
-      { message: "If this email can be registered, a verification email has been sent." },
-      { status: 200 }
-    );
-  }
-
-  const passwordHash = await hashPassword(password);
-
-  const user = await prisma.user.create({
-    data: { name, email, passwordHash, role: "CUSTOMER", status: "PENDING_VERIFICATION" },
-  });
-
-  const rawToken = crypto.randomBytes(32).toString("hex");
-  const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
-
-  await prisma.verificationToken.create({
-    data: {
-      userId: user.id,
-      tokenHash,
-      purpose: "EMAIL_VERIFY",
-      expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24),
-    },
-  });
-
-  const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL}/verify-email?token=${rawToken}`;
-
-  await sendEmail({
-    to: email,
-    subject: "Verify your EAPASER account",
-    html: `<p>Confirm your email to finish creating your account.</p><p><a href="${verifyUrl}">Verify email</a></p>`,
-  });
-
-  await recordAuditLog({
-    actorId: user.id,
-    action: "USER_REGISTERED",
-    resource: "User",
-    resourceId: user.id,
-    ipAddress: ip,
-  });
-
-  await notifyAdminTelegram({
-    event: "NEW_USER",
-    summary: `New account registered: ${name}`,
-    fields: { email },
-  });
-
-  return NextResponse.json(
-    { message: "If this email can be registered, a verification email has been sent." },
-    { status: 200 }
-  );
 }
