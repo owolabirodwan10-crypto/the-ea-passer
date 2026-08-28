@@ -27,7 +27,12 @@ import {
   DollarSign,
   Building2,
   Wallet,
-  BadgeCheck
+  BadgeCheck,
+  Clock,
+  Flame,
+  CheckCircle,
+  Package,
+  Layers
 } from "lucide-react";
 
 // Category icon mapping
@@ -59,11 +64,22 @@ export default async function HomePage() {
     orderBy: { createdAt: "desc" },
   });
 
+  // Fetch newly published products (latest)
+  const newProducts = await prisma.product.findMany({
+    where: { 
+      status: "APPROVED",
+    },
+    include: {
+      category: true,
+    },
+    take: 6,
+    orderBy: { createdAt: "desc" },
+  });
+
   // Fetch categories
   const categories = await prisma.productCategory.findMany({
     where: { active: true },
     orderBy: { sortOrder: "asc" },
-    take: 6,
   });
 
   // Get total product count
@@ -71,9 +87,35 @@ export default async function HomePage() {
     where: { status: "APPROVED" },
   });
 
-  // Get images for each product
+  // Get images for featured products
   const featured = await Promise.all(
     featuredProducts.map(async (product) => {
+      let mainImage = null;
+      try {
+        const images = await prisma.productImage.findMany({
+          where: { 
+            product_id: product.id,
+            is_main: true,
+          },
+          take: 1,
+        });
+        if (images && images.length > 0) {
+          mainImage = images[0];
+        }
+      } catch (error) {
+        mainImage = null;
+      }
+      
+      return {
+        ...product,
+        images: mainImage ? [{ url: mainImage.url, is_main: true }] : [],
+      };
+    })
+  );
+
+  // Get images for new products
+  const newProductsWithImages = await Promise.all(
+    newProducts.map(async (product) => {
       let mainImage = null;
       try {
         const images = await prisma.productImage.findMany({
@@ -101,8 +143,38 @@ export default async function HomePage() {
     <div className="min-h-screen bg-bg text-text">
       <SiteHeader />
       
+      {/* Marketplace Status Bar - Full Width with Padding */}
+      <section className="py-8 border-b border-border bg-surface/50">
+        <div className="container-custom">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Layers className="w-6 h-6 text-primaryBright" />
+              <div>
+                <p className="text-sm font-medium">Marketplace Status</p>
+                <div className="flex items-center gap-4 text-sm text-muted">
+                  <span className="flex items-center gap-1">
+                    <Package className="w-3 h-3" />
+                    {listingCount} Approved Listings
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Layers className="w-3 h-3" />
+                    {categories.length} Categories
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-muted">These numbers come directly from the database.</span>
+              <Link href="/marketplace" className="text-primaryBright hover:underline text-sm font-medium flex items-center gap-1">
+                Explore <ArrowRight className="w-3 h-3" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Hero Section */}
-      <section className="relative overflow-hidden py-20 sm:py-28">
+      <section className="relative overflow-hidden py-16 sm:py-24">
         <div className="container-custom relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
@@ -115,14 +187,14 @@ export default async function HomePage() {
                 <br />
                 <span className="text-primaryBright">Automate With Confidence.</span>
               </h1>
-              <p className="mt-6 text-lg text-muted max-w-lg">
+              <p className="mt-6 text-lg text-muted max-w-lg leading-relaxed">
                 Professional Forex automation, prop-firm solutions and trading technology 
                 designed around disciplined execution and risk management.
               </p>
               <div className="mt-8 flex flex-col sm:flex-row gap-4">
-                <Link href="/marketplace" className="btn-primary text-sm sm:text-base px-6 py-3">
+                <Link href="/marketplace" className="btn-primary text-sm sm:text-base px-6 py-3 flex items-center gap-2">
                   Explore Marketplace
-                  <ArrowRight className="w-4 h-4 ml-2" />
+                  <ArrowRight className="w-4 h-4" />
                 </Link>
                 <Link href="/performance" className="btn-secondary text-sm sm:text-base px-6 py-3">
                   View Performance
@@ -201,7 +273,7 @@ export default async function HomePage() {
       {/* Trust Strip */}
       <section className="py-6 border-y border-border">
         <div className="container-custom">
-          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8">
+          <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10">
             {[
               { icon: Bot, label: "MT4" },
               { icon: Cpu, label: "MT5" },
@@ -224,8 +296,99 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* Newly Published Section */}
+      {newProductsWithImages.length > 0 && (
+        <section className="py-16">
+          <div className="container-custom">
+            <div className="flex flex-wrap items-center justify-between mb-8">
+              <div>
+                <h2 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
+                  <Clock className="w-6 h-6 text-primaryBright" />
+                  Newly Published
+                </h2>
+                <p className="text-muted mt-1">Freshly listed trading systems.</p>
+              </div>
+              <Link href="/marketplace" className="text-primaryBright hover:underline flex items-center gap-1 mt-2 sm:mt-0">
+                View All
+                <ChevronRight className="w-4 h-4" />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {newProductsWithImages.slice(0, 6).map((product) => (
+                <Link
+                  key={product.id}
+                  href={`/product/${product.slug}`}
+                  className="card group overflow-hidden hover:scale-[1.02] transition-all duration-300"
+                >
+                  <div className="relative h-48 bg-surface overflow-hidden">
+                    {product.images && product.images.length > 0 ? (
+                      <Image
+                        src={product.images[0].url}
+                        alt={product.name}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-mutedSoft bg-surface2">
+                        <Bot className="w-12 h-12 opacity-20" />
+                      </div>
+                    )}
+                    <span className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 bg-primaryBright text-bg text-xs font-semibold rounded-full">
+                      <Clock className="w-3 h-3" />
+                      New
+                    </span>
+                  </div>
+                  <div className="p-5">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      {product.category && (
+                        <span className="badge badge-primary text-xs">
+                          {product.category.name}
+                        </span>
+                      )}
+                      {product.platform && (
+                        <span className="badge badge-gray text-xs">
+                          {product.platform}
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="text-lg font-semibold mb-1 line-clamp-1">{product.name}</h3>
+                    <p className="text-sm text-muted line-clamp-2">
+                      {product.short_description || "Professional trading system"}
+                    </p>
+                    <div className="mt-4 flex flex-wrap items-center justify-between">
+                      <div>
+                        {product.sale_price ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xl font-bold text-primaryBright">
+                              ${product.sale_price}
+                            </span>
+                            <span className="text-sm text-mutedSoft line-through">
+                              ${product.price}
+                            </span>
+                          </div>
+                        ) : product.price ? (
+                          <span className="text-xl font-bold">
+                            ${product.price}
+                          </span>
+                        ) : (
+                          <span className="text-xl font-bold text-primaryBright">Free</span>
+                        )}
+                      </div>
+                      <span className="text-primaryBright group-hover:translate-x-1 transition-transform">
+                        <ArrowRight className="w-5 h-5" />
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Why EAPASSER */}
-      <section className="py-16">
+      <section className="py-16 bg-surface/30">
         <div className="container-custom">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold">
@@ -270,12 +433,13 @@ export default async function HomePage() {
 
       {/* Featured Products */}
       {featured.length > 0 && (
-        <section className="py-16 bg-surface/30">
+        <section className="py-16">
           <div className="container-custom">
             <div className="flex flex-wrap items-center justify-between mb-8">
               <div>
-                <h2 className="text-2xl sm:text-3xl font-bold">
-                  Featured <span className="text-primaryBright">Systems</span>
+                <h2 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
+                  <Star className="w-6 h-6 text-primaryBright" />
+                  Featured Systems
                 </h2>
                 <p className="text-muted mt-1">Premium trading systems trusted by traders worldwide.</p>
               </div>
@@ -362,13 +526,13 @@ export default async function HomePage() {
 
       {/* Categories */}
       {categories.length > 0 && (
-        <section className="py-16">
+        <section className="py-16 bg-surface/30">
           <div className="container-custom">
             <h2 className="text-2xl font-bold text-center mb-8">
               Browse by <span className="text-primaryBright">Category</span>
             </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-              {categories.map((category) => {
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+              {categories.slice(0, 12).map((category) => {
                 const Icon = categoryIcons[category.name] || BarChart3;
                 return (
                   <Link
@@ -399,9 +563,9 @@ export default async function HomePage() {
             risk management, and consistent performance.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/marketplace" className="btn-primary text-sm sm:text-base px-6 py-3">
+            <Link href="/marketplace" className="btn-primary text-sm sm:text-base px-6 py-3 flex items-center gap-2">
               Explore Marketplace
-              <ArrowRight className="w-4 h-4 ml-2" />
+              <ArrowRight className="w-4 h-4" />
             </Link>
             <Link href="/contact" className="btn-secondary border-white/30 text-white hover:bg-white/10 text-sm sm:text-base px-6 py-3">
               Contact Sales
