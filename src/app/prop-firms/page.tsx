@@ -10,8 +10,29 @@ export const metadata: Metadata = {
   description: "Prop firm challenge and EA compatibility directory maintained by EAPASER.",
 };
 
+// ✅ Define the PropFirm type
+interface PropFirm {
+  id: string;
+  name: string;
+  description: string | null;
+  eaCompatible: boolean;
+  website: string | null;
+  accountSizes: string[];
+}
+
 export default async function PropFirmsPage() {
-  const firms = await prisma.propFirm.findMany({ where: { status: "PUBLISHED" }, orderBy: { name: "asc" } });
+  // ✅ Explicitly type the firms array
+  let firms: PropFirm[] = [];
+  
+  try {
+    const result = await prisma.propFirm.findMany({ 
+      where: { status: "PUBLISHED" }, 
+      orderBy: { name: "asc" } 
+    });
+    firms = result as PropFirm[];
+  } catch (error) {
+    console.error('Error fetching prop firms:', error);
+  }
 
   return (
     <div className="min-h-screen bg-bg text-text">
@@ -31,7 +52,7 @@ export default async function PropFirmsPage() {
                 <h3 className="mb-1.5 text-[15px] font-semibold">{f.name}</h3>
                 {f.description && <p className="mb-3 line-clamp-3 text-[13.5px] text-muted">{f.description}</p>}
                 <div className="flex items-center gap-2 text-[11px] text-mutedSoft">
-                  <span>{f.eaCompatible ? "EA compatible" : "EA compatibility not confirmed"}</span>
+                  <span>{f.eaCompatible ? "✅ EA compatible" : "❌ EA compatibility not confirmed"}</span>
                 </div>
               </div>
             ))}

@@ -13,19 +13,31 @@ export const metadata: Metadata = {
   description: "Broker directory with platform and EA compatibility, managed by the EAPASER team.",
 };
 
+// ✅ Define the Broker type
+interface Broker {
+  id: string;
+  name: string;
+  description: string | null;
+  platforms: string[];
+  featured: boolean;
+  website: string | null;
+  compatibility: string | null;
+}
+
 export default async function BrokersPage() {
-  let brokers = [];
+  // ✅ Explicitly type the brokers array
+  let brokers: Broker[] = [];
   
   try {
-    brokers = await prisma.broker.findMany({
+    const result = await prisma.broker.findMany({
       where: { status: "PUBLISHED" },
       orderBy: [{ featured: "desc" }, { name: "asc" }],
     });
+    brokers = result as Broker[];
   } catch (error) {
     console.error('Error fetching brokers:', error);
   }
 
-  // Return statement should be here, NOT inside the try/catch
   return (
     <div className="min-h-screen bg-bg text-text">
       <SiteHeader />
@@ -41,7 +53,7 @@ export default async function BrokersPage() {
               <div key={b.id} className="rounded-card border border-border bg-surface p-5">
                 <h3 className="mb-1.5 text-[15px] font-semibold">{b.name}</h3>
                 {b.description && <p className="mb-3 line-clamp-3 text-[13.5px] text-muted">{b.description}</p>}
-                {b.platforms.length > 0 && (
+                {b.platforms && b.platforms.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
                     {b.platforms.map((p) => (
                       <span key={p} className="rounded-full border border-border px-2 py-0.5 text-[11px] text-mutedSoft">{p}</span>
