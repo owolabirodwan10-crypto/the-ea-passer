@@ -29,13 +29,11 @@ function LoginForm() {
 
       if (error) throw error;
 
-      // ✅ Get session to ensure cookies are set
       await supabase.auth.getSession();
 
       const role = data.user?.user_metadata?.role || "CUSTOMER";
       const redirectPath = role === "ADMIN" || role === "SUPER_ADMIN" ? "/admin" : next;
 
-      // ✅ Force full page reload to pick up cookies
       window.location.href = redirectPath;
     } catch (err: any) {
       setError(err.message || "Invalid email or password");
@@ -96,7 +94,7 @@ function LoginForm() {
           </form>
 
           <p className="mt-6 text-center text-sm text-muted">
-            Don't have an account?{" "}
+            Don&apos;t have an account?{" "}
             <Link href="/register" className="text-primaryBright hover:underline">Create one</Link>
           </p>
         </div>
