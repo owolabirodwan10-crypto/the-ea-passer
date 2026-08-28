@@ -3,18 +3,13 @@ import Link from "next/link";
 import Image from "next/image";
 import { 
   ArrowRight, 
-  Shield, 
   Zap, 
-  BarChart3, 
-  Users,
   Star,
-  TrendingUp,
-  Check,
   ChevronRight
 } from "lucide-react";
 
 export default async function HomePage() {
-  // Fetch featured products
+  // ✅ Fetch featured products with categories
   const featuredProducts = await prisma.product.findMany({
     where: { 
       status: "APPROVED",
@@ -27,40 +22,44 @@ export default async function HomePage() {
     orderBy: { createdAt: "desc" },
   });
 
-  // Fetch categories
+  // ✅ Fetch categories
   const categories = await prisma.productCategory.findMany({
     where: { active: true },
     orderBy: { sortOrder: "asc" },
     take: 6,
   });
 
-  // Get total product count
+  // ✅ Get total product count
   const listingCount = await prisma.product.count({
     where: { status: "APPROVED" },
   });
 
-  // For each product, fetch its main image separately using the correct model name
-  const featured = await Promise.all(
-    featuredProducts.map(async (product) => {
-      try {
-        const mainImage = await prisma.productImage.findFirst({
-          where: { 
-            product_id: product.id,
-            is_main: true,
-          },
-        });
-        return {
-          ...product,
-          images: mainImage ? [{ url: mainImage.url, is_main: true }] : [],
-        };
-      } catch (error) {
-        return {
-          ...product,
-          images: [],
-        };
-      }
-    })
-  );
+  // ✅ Get images for each product using a single query (more efficient)
+  const productIds = featuredProducts.map(p => p.id);
+  
+  let productImages: any[] = [];
+  if (productIds.length > 0) {
+    try {
+      // ✅ Try to fetch images - if this fails, we just have no images
+      productImages = await prisma.$queryRaw`
+        SELECT * FROM "ProductImage" 
+        WHERE "product_id" IN (${productIds.join(',')}) 
+        AND "is_main" = true
+      ` as any[];
+    } catch (error) {
+      // If the table doesn't exist or query fails, just use empty array
+      productImages = [];
+    }
+  }
+
+  // ✅ Combine products with their images
+  const featured = featuredProducts.map((product) => {
+    const image = productImages.find((img: any) => img.product_id === product.id);
+    return {
+      ...product,
+      images: image ? [{ url: image.url, is_main: true }] : [],
+    };
+  });
 
   return (
     <div className="min-h-screen bg-bg text-text">
