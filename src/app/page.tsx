@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 
 export default async function HomePage() {
-  // Fetch featured products WITHOUT including images directly
+  // Fetch featured products
   const featuredProducts = await prisma.product.findMany({
     where: { 
       status: "APPROVED",
@@ -39,19 +39,26 @@ export default async function HomePage() {
     where: { status: "APPROVED" },
   });
 
-  // For each product, fetch its main image separately
+  // For each product, fetch its main image separately using the correct model name
   const featured = await Promise.all(
     featuredProducts.map(async (product) => {
-      const mainImage = await prisma.productImage.findFirst({
-        where: { 
-          product_id: product.id,
-          is_main: true,
-        },
-      });
-      return {
-        ...product,
-        images: mainImage ? [{ url: mainImage.url, is_main: true }] : [],
-      };
+      try {
+        const mainImage = await prisma.productImage.findFirst({
+          where: { 
+            product_id: product.id,
+            is_main: true,
+          },
+        });
+        return {
+          ...product,
+          images: mainImage ? [{ url: mainImage.url, is_main: true }] : [],
+        };
+      } catch (error) {
+        return {
+          ...product,
+          images: [],
+        };
+      }
     })
   );
 
