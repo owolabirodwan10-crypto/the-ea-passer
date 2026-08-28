@@ -29,9 +29,13 @@ function LoginForm() {
 
       if (error) throw error;
 
+      // ✅ Get session to ensure cookies are set
+      await supabase.auth.getSession();
+
       const role = data.user?.user_metadata?.role || "CUSTOMER";
       const redirectPath = role === "ADMIN" || role === "SUPER_ADMIN" ? "/admin" : next;
 
+      // ✅ Force full page reload to pick up cookies
       window.location.href = redirectPath;
     } catch (err: any) {
       setError(err.message || "Invalid email or password");
