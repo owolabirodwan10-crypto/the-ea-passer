@@ -1,21 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
 
 export function SearchBox({ initialQuery }: { initialQuery: string }) {
   const router = useRouter();
   const [q, setQ] = useState(initialQuery);
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    router.push(`/admin/users${params.toString() ? `?${params.toString()}` : ""}`);
+  };
+
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        router.push(`/admin/users${q ? `?q=${encodeURIComponent(q)}` : ""}`);
-      }}
-      className="relative max-w-sm"
-    >
+    <form onSubmit={handleSubmit} className="relative max-w-sm">
       <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-mutedSoft" />
       <input
         value={q}
