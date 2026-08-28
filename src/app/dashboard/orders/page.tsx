@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link"; // ✅ ADD THIS IMPORT
 import { Package } from "lucide-react";
 import { createBrowserSupabaseClient } from "@/lib/supabase-client";
 
