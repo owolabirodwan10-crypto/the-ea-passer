@@ -13,67 +13,47 @@ import {
   ChevronRight
 } from "lucide-react";
 
-// ✅ Define types
-interface Product {
-  id: string;
-  name: string;
-  slug: string;
-  short_description: string | null;
-  price: number | null;
-  sale_price: number | null;
-  platform: string | null;
-  featured: boolean;
-  category: { name: string } | null;
-  images: { url: string; is_main: boolean }[];
-}
-
-interface Category {
-  id: string;
-  name: string;
-  slug: string;
-  icon: string | null;
-}
-
 export default async function HomePage() {
-  // ✅ Explicitly type the arrays
-  let featured: Product[] = [];
-  let categories: Category[] = [];
-  let listingCount = 0;
+  // Fetch featured products WITHOUT including images directly
+  const featuredProducts = await prisma.product.findMany({
+    where: { 
+      status: "APPROVED",
+      featured: true,
+    },
+    include: {
+      category: true,
+    },
+    take: 6,
+    orderBy: { createdAt: "desc" },
+  });
 
-  try {
-    // Fetch featured products
-    const featuredProducts = await prisma.product.findMany({
-      where: { 
-        status: "APPROVED",
-        featured: true,
-      },
-      include: {
-        images: {
-          where: { is_main: true },
-          take: 1,
+  // Fetch categories
+  const categories = await prisma.productCategory.findMany({
+    where: { active: true },
+    orderBy: { sortOrder: "asc" },
+    take: 6,
+  });
+
+  // Get total product count
+  const listingCount = await prisma.product.count({
+    where: { status: "APPROVED" },
+  });
+
+  // For each product, fetch its main image separately
+  const featured = await Promise.all(
+    featuredProducts.map(async (product) => {
+      const mainImage = await prisma.productImage.findFirst({
+        where: { 
+          product_id: product.id,
+          is_main: true,
         },
-        category: true,
-      },
-      take: 6,
-      orderBy: { createdAt: "desc" },
-    });
-    featured = featuredProducts as Product[];
-
-    // Fetch categories
-    const categoriesData = await prisma.productCategory.findMany({
-      where: { active: true },
-      orderBy: { sortOrder: "asc" },
-      take: 6,
-    });
-    categories = categoriesData as Category[];
-
-    // Get total product count
-    listingCount = await prisma.product.count({
-      where: { status: "APPROVED" },
-    });
-  } catch (error) {
-    console.error("Error fetching homepage data:", error);
-  }
+      });
+      return {
+        ...product,
+        images: mainImage ? [{ url: mainImage.url, is_main: true }] : [],
+      };
+    })
+  );
 
   return (
     <div className="min-h-screen bg-bg text-text">
