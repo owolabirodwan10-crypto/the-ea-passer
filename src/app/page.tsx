@@ -11,8 +11,39 @@ import {
   Shield,
   TrendingUp,
   Users,
-  BarChart3
+  BarChart3,
+  Activity,
+  Target,
+  Award,
+  Globe,
+  Bot,
+  Sparkles,
+  Coins,
+  ChartLine,
+  Gauge,
+  Cpu,
+  LineChart,
+  CandlestickChart,
+  DollarSign,
+  Building2,
+  Wallet,
+  BadgeCheck
 } from "lucide-react";
+
+// Category icon mapping
+const categoryIcons: Record<string, any> = {
+  "Forex Robots": Bot,
+  "Forex EAs": Bot,
+  "MT4 EAs": Cpu,
+  "MT5 EAs": Cpu,
+  "Gold EAs": Coins,
+  "Scalping EAs": Gauge,
+  "Prop Firm EAs": Award,
+  "AI EAs": Sparkles,
+  "Indicators": ChartLine,
+  "Signals": CandlestickChart,
+  "VPS": Globe,
+};
 
 export default async function HomePage() {
   // Fetch featured products
@@ -71,7 +102,7 @@ export default async function HomePage() {
       <SiteHeader />
       
       {/* Hero Section */}
-      <section className="relative overflow-hidden py-20 sm:py-32">
+      <section className="relative overflow-hidden py-20 sm:py-28">
         <div className="container-custom relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
@@ -89,11 +120,11 @@ export default async function HomePage() {
                 designed around disciplined execution and risk management.
               </p>
               <div className="mt-8 flex flex-col sm:flex-row gap-4">
-                <Link href="/marketplace" className="btn-primary">
+                <Link href="/marketplace" className="btn-primary text-sm sm:text-base px-6 py-3">
                   Explore Marketplace
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="w-4 h-4 ml-2" />
                 </Link>
-                <Link href="/performance" className="btn-secondary">
+                <Link href="/performance" className="btn-secondary text-sm sm:text-base px-6 py-3">
                   View Performance
                 </Link>
               </div>
@@ -104,7 +135,7 @@ export default async function HomePage() {
                 </div>
                 <div className="w-px h-10 bg-border" />
                 <div>
-                  <p className="text-2xl font-bold text-white">1000+</p>
+                  <p className="text-2xl font-bold text-white">1,000+</p>
                   <p className="text-sm text-muted">Active Traders</p>
                 </div>
                 <div className="w-px h-10 bg-border" />
@@ -115,7 +146,7 @@ export default async function HomePage() {
               </div>
             </div>
             <div className="hidden lg:block">
-              <div className="glass p-6 rounded-2xl">
+              <div className="glass p-6 rounded-2xl border border-white/10">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
@@ -124,19 +155,19 @@ export default async function HomePage() {
                     </div>
                     <div className="text-right">
                       <p className="text-sm text-muted">Daily P/L</p>
-                      <p className="text-2xl font-bold text-success">+$2,847.18</p>
+                      <p className="text-2xl font-bold text-green-400">+$2,847.18</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-3 gap-4">
-                    <div className="p-3 bg-white/5 rounded-lg">
+                    <div className="p-3 bg-white/5 rounded-lg text-center">
                       <p className="text-xs text-muted">Drawdown</p>
                       <p className="text-lg font-semibold text-white">8.2%</p>
                     </div>
-                    <div className="p-3 bg-white/5 rounded-lg">
+                    <div className="p-3 bg-white/5 rounded-lg text-center">
                       <p className="text-xs text-muted">Win Rate</p>
                       <p className="text-lg font-semibold text-primaryBright">67.4%</p>
                     </div>
-                    <div className="p-3 bg-white/5 rounded-lg">
+                    <div className="p-3 bg-white/5 rounded-lg text-center">
                       <p className="text-xs text-muted">Profit Factor</p>
                       <p className="text-lg font-semibold text-white">1.82</p>
                     </div>
@@ -147,18 +178,18 @@ export default async function HomePage() {
                       <span className="text-sm font-medium text-primaryBright">4</span>
                     </div>
                     <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <span className="text-xs px-2 py-1 bg-success/20 text-success rounded">EURUSD</span>
-                      <span className="text-xs px-2 py-1 bg-yellow-500/20 text-yellow-500 rounded">XAUUSD</span>
-                      <span className="text-xs px-2 py-1 bg-blue-500/20 text-blue-500 rounded">GBPUSD</span>
-                      <span className="text-xs px-2 py-1 bg-purple-500/20 text-purple-500 rounded">BTCUSD</span>
+                      <span className="text-xs px-3 py-1 bg-green-500/20 text-green-400 rounded-full">EURUSD</span>
+                      <span className="text-xs px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full">XAUUSD</span>
+                      <span className="text-xs px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full">GBPUSD</span>
+                      <span className="text-xs px-3 py-1 bg-purple-500/20 text-purple-400 rounded-full">BTCUSD</span>
                     </div>
                   </div>
                   <div className="p-3 bg-white/5 rounded-lg flex items-center justify-between">
                     <div>
                       <p className="text-xs text-muted">EA Status</p>
-                      <p className="text-sm font-medium text-success">● EAPASSER Active</p>
+                      <p className="text-sm font-medium text-green-400">● EAPASSER Active</p>
                     </div>
-                    <span className="text-xs text-muted">Demo Data</span>
+                    <span className="text-xs text-muted bg-white/5 px-2 py-1 rounded">Demo Data</span>
                   </div>
                 </div>
               </div>
@@ -168,14 +199,27 @@ export default async function HomePage() {
       </section>
 
       {/* Trust Strip */}
-      <section className="py-8 border-y border-border">
+      <section className="py-6 border-y border-border">
         <div className="container-custom">
-          <div className="flex flex-wrap items-center justify-center gap-6 md:gap-12">
-            {['MT4', 'MT5', 'Forex', 'Gold', 'Indices', 'Prop Firms', 'Automation', 'Risk Management'].map((item) => (
-              <span key={item} className="text-sm font-medium text-muted hover:text-primaryBright transition-colors">
-                {item}
-              </span>
-            ))}
+          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8">
+            {[
+              { icon: Bot, label: "MT4" },
+              { icon: Cpu, label: "MT5" },
+              { icon: DollarSign, label: "Forex" },
+              { icon: Coins, label: "Gold" },
+              { icon: LineChart, label: "Indices" },
+              { icon: Award, label: "Prop Firms" },
+              { icon: Gauge, label: "Automation" },
+              { icon: Shield, label: "Risk Management" },
+            ].map((item) => {
+              const Icon = item.icon;
+              return (
+                <div key={item.label} className="flex items-center gap-2 text-sm font-medium text-muted hover:text-primaryBright transition-colors">
+                  <Icon className="w-4 h-4" />
+                  <span>{item.label}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -191,7 +235,7 @@ export default async function HomePage() {
               Built around professionalism, transparency, and technology.
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
               {
                 icon: Shield,
@@ -215,8 +259,8 @@ export default async function HomePage() {
                   <div className="w-14 h-14 mx-auto rounded-2xl bg-primaryBright/10 flex items-center justify-center mb-4">
                     <Icon className="w-7 h-7 text-primaryBright" />
                   </div>
-                  <h3 className="text-xl font-semibold mb-2">{item.title}</h3>
-                  <p className="text-sm text-muted">{item.description}</p>
+                  <h3 className="text-lg font-semibold mb-2">{item.title}</h3>
+                  <p className="text-sm text-muted leading-relaxed">{item.description}</p>
                 </div>
               );
             })}
@@ -257,12 +301,12 @@ export default async function HomePage() {
                         className="object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-mutedSoft">
-                        No Image
+                      <div className="w-full h-full flex items-center justify-center text-mutedSoft bg-surface2">
+                        <Bot className="w-12 h-12 opacity-20" />
                       </div>
                     )}
                     {product.featured && (
-                      <span className="absolute top-3 right-3 badge badge-featured">
+                      <span className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 bg-primaryBright text-bg text-xs font-semibold rounded-full">
                         <Star className="w-3 h-3" />
                         Featured
                       </span>
@@ -281,7 +325,7 @@ export default async function HomePage() {
                         </span>
                       )}
                     </div>
-                    <h3 className="text-lg font-semibold mb-1">{product.name}</h3>
+                    <h3 className="text-lg font-semibold mb-1 line-clamp-1">{product.name}</h3>
                     <p className="text-sm text-muted line-clamp-2">
                       {product.short_description || "Professional trading system"}
                     </p>
@@ -324,16 +368,21 @@ export default async function HomePage() {
               Browse by <span className="text-primaryBright">Category</span>
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-              {categories.map((category) => (
-                <Link
-                  key={category.id}
-                  href={`/marketplace?category=${category.slug}`}
-                  className="bg-surface rounded-card border border-border p-4 text-center hover:border-primaryBright/30 transition hover:scale-[1.02]"
-                >
-                  <div className="text-3xl mb-2">{category.icon || "📊"}</div>
-                  <p className="text-sm font-medium">{category.name}</p>
-                </Link>
-              ))}
+              {categories.map((category) => {
+                const Icon = categoryIcons[category.name] || BarChart3;
+                return (
+                  <Link
+                    key={category.id}
+                    href={`/marketplace?category=${category.slug}`}
+                    className="bg-surface rounded-card border border-border p-4 text-center hover:border-primaryBright/30 transition hover:scale-[1.02] group"
+                  >
+                    <div className="w-12 h-12 mx-auto rounded-xl bg-primaryBright/10 flex items-center justify-center mb-3 group-hover:bg-primaryBright/20 transition">
+                      <Icon className="w-6 h-6 text-primaryBright" />
+                    </div>
+                    <p className="text-sm font-medium">{category.name}</p>
+                  </Link>
+                );
+              })}
             </div>
           </div>
         </section>
@@ -350,11 +399,11 @@ export default async function HomePage() {
             risk management, and consistent performance.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/marketplace" className="btn-primary">
+            <Link href="/marketplace" className="btn-primary text-sm sm:text-base px-6 py-3">
               Explore Marketplace
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-4 h-4 ml-2" />
             </Link>
-            <Link href="/contact" className="btn-secondary border-white/30 text-white hover:bg-white/10">
+            <Link href="/contact" className="btn-secondary border-white/30 text-white hover:bg-white/10 text-sm sm:text-base px-6 py-3">
               Contact Sales
             </Link>
           </div>
