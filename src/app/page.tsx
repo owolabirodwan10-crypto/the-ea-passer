@@ -12,10 +12,6 @@ import {
   TrendingUp,
   Users,
   BarChart3,
-  Activity,
-  Target,
-  Award,
-  Globe,
   Bot,
   Sparkles,
   Coins,
@@ -25,15 +21,15 @@ import {
   LineChart,
   CandlestickChart,
   DollarSign,
-  Building2,
-  Wallet,
-  BadgeCheck,
+  Award,
   Clock,
-  Flame,
-  CheckCircle,
   Package,
-  Layers
+  Layers,
+  CheckCircle,
+  Target,
+  Activity
 } from "lucide-react";
+import { TelegramPopup } from "@/components/TelegramPopup";
 
 // Category icon mapping
 const categoryIcons: Record<string, any> = {
@@ -56,18 +52,6 @@ export default async function HomePage() {
     where: { 
       status: "APPROVED",
       featured: true,
-    },
-    include: {
-      category: true,
-    },
-    take: 6,
-    orderBy: { createdAt: "desc" },
-  });
-
-  // Fetch newly published products (latest)
-  const newProducts = await prisma.product.findMany({
-    where: { 
-      status: "APPROVED",
     },
     include: {
       category: true,
@@ -105,33 +89,6 @@ export default async function HomePage() {
       } catch (error) {
         mainImage = null;
       }
-      
-      return {
-        ...product,
-        images: mainImage ? [{ url: mainImage.url, is_main: true }] : [],
-      };
-    })
-  );
-
-  // Get images for new products
-  const newProductsWithImages = await Promise.all(
-    newProducts.map(async (product) => {
-      let mainImage = null;
-      try {
-        const images = await prisma.productImage.findMany({
-          where: { 
-            product_id: product.id,
-            is_main: true,
-          },
-          take: 1,
-        });
-        if (images && images.length > 0) {
-          mainImage = images[0];
-        }
-      } catch (error) {
-        mainImage = null;
-      }
-      
       return {
         ...product,
         images: mainImage ? [{ url: mainImage.url, is_main: true }] : [],
@@ -143,38 +100,11 @@ export default async function HomePage() {
     <div className="min-h-screen bg-bg text-text">
       <SiteHeader />
       
-      {/* Marketplace Status Bar - Full Width with Padding */}
-      <section className="py-8 border-b border-border bg-surface/50">
-        <div className="container-custom">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <Layers className="w-6 h-6 text-primaryBright" />
-              <div>
-                <p className="text-sm font-medium">Marketplace Status</p>
-                <div className="flex items-center gap-4 text-sm text-muted">
-                  <span className="flex items-center gap-1">
-                    <Package className="w-3 h-3" />
-                    {listingCount} Approved Listings
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Layers className="w-3 h-3" />
-                    {categories.length} Categories
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-muted">These numbers come directly from the database.</span>
-              <Link href="/marketplace" className="text-primaryBright hover:underline text-sm font-medium flex items-center gap-1">
-                Explore <ArrowRight className="w-3 h-3" />
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
+      {/* Telegram Popup */}
+      <TelegramPopup />
+      
       {/* Hero Section */}
-      <section className="relative overflow-hidden py-16 sm:py-24">
+      <section className="relative overflow-hidden py-20 sm:py-28">
         <div className="container-custom relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
@@ -296,99 +226,34 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Newly Published Section */}
-      {newProductsWithImages.length > 0 && (
-        <section className="py-16">
-          <div className="container-custom">
-            <div className="flex flex-wrap items-center justify-between mb-8">
-              <div>
-                <h2 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
-                  <Clock className="w-6 h-6 text-primaryBright" />
-                  Newly Published
-                </h2>
-                <p className="text-muted mt-1">Freshly listed trading systems.</p>
-              </div>
-              <Link href="/marketplace" className="text-primaryBright hover:underline flex items-center gap-1 mt-2 sm:mt-0">
-                View All
-                <ChevronRight className="w-4 h-4" />
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {newProductsWithImages.slice(0, 6).map((product) => (
-                <Link
-                  key={product.id}
-                  href={`/product/${product.slug}`}
-                  className="card group overflow-hidden hover:scale-[1.02] transition-all duration-300"
-                >
-                  <div className="relative h-48 bg-surface overflow-hidden">
-                    {product.images && product.images.length > 0 ? (
-                      <Image
-                        src={product.images[0].url}
-                        alt={product.name}
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-mutedSoft bg-surface2">
-                        <Bot className="w-12 h-12 opacity-20" />
-                      </div>
-                    )}
-                    <span className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 bg-primaryBright text-bg text-xs font-semibold rounded-full">
-                      <Clock className="w-3 h-3" />
-                      New
-                    </span>
-                  </div>
-                  <div className="p-5">
-                    <div className="flex flex-wrap items-center gap-2 mb-2">
-                      {product.category && (
-                        <span className="badge badge-primary text-xs">
-                          {product.category.name}
-                        </span>
-                      )}
-                      {product.platform && (
-                        <span className="badge badge-gray text-xs">
-                          {product.platform}
-                        </span>
-                      )}
-                    </div>
-                    <h3 className="text-lg font-semibold mb-1 line-clamp-1">{product.name}</h3>
-                    <p className="text-sm text-muted line-clamp-2">
-                      {product.short_description || "Professional trading system"}
-                    </p>
-                    <div className="mt-4 flex flex-wrap items-center justify-between">
-                      <div>
-                        {product.sale_price ? (
-                          <div className="flex items-center gap-2">
-                            <span className="text-xl font-bold text-primaryBright">
-                              ${product.sale_price}
-                            </span>
-                            <span className="text-sm text-mutedSoft line-through">
-                              ${product.price}
-                            </span>
-                          </div>
-                        ) : product.price ? (
-                          <span className="text-xl font-bold">
-                            ${product.price}
-                          </span>
-                        ) : (
-                          <span className="text-xl font-bold text-primaryBright">Free</span>
-                        )}
-                      </div>
-                      <span className="text-primaryBright group-hover:translate-x-1 transition-transform">
-                        <ArrowRight className="w-5 h-5" />
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
+      {/* How It Works */}
+      <section className="py-16 bg-surface/30">
+        <div className="container-custom">
+          <div className="text-center mb-12">
+            <span className="text-xs font-semibold uppercase tracking-wider text-primaryBright">How It Works</span>
+            <h2 className="text-3xl font-bold mt-2">
+              From Discovery To <span className="text-primaryBright">Running EA</span>
+            </h2>
           </div>
-        </section>
-      )}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {[
+              { step: "01", title: "Discover", description: "Filter by platform, market and strategy to find EAs that fit how you trade." },
+              { step: "02", title: "Compare", description: "Review pricing, requirements and any performance evidence developers submitted." },
+              { step: "03", title: "Buy", description: "Checkout securely. Your license and download unlock as soon as payment clears." },
+              { step: "04", title: "Activate", description: "Install on your terminal, activate your license, and get update notifications." },
+            ].map((item) => (
+              <div key={item.step} className="card p-6 text-center hover:scale-[1.02] transition-all duration-300">
+                <div className="text-4xl font-bold text-primaryBright/30">{item.step}</div>
+                <h3 className="text-lg font-semibold mt-2">{item.title}</h3>
+                <p className="text-sm text-muted mt-2">{item.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* Why EAPASSER */}
-      <section className="py-16 bg-surface/30">
+      <section className="py-16">
         <div className="container-custom">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold">
@@ -430,6 +295,34 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Categories */}
+      {categories.length > 0 && (
+        <section className="py-16 bg-surface/30">
+          <div className="container-custom">
+            <h2 className="text-2xl font-bold text-center mb-8">
+              Browse by <span className="text-primaryBright">Category</span>
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+              {categories.slice(0, 12).map((category) => {
+                const Icon = categoryIcons[category.name] || BarChart3;
+                return (
+                  <Link
+                    key={category.id}
+                    href={`/marketplace?category=${category.slug}`}
+                    className="bg-surface rounded-card border border-border p-4 text-center hover:border-primaryBright/30 transition hover:scale-[1.02] group"
+                  >
+                    <div className="w-12 h-12 mx-auto rounded-xl bg-primaryBright/10 flex items-center justify-center mb-3 group-hover:bg-primaryBright/20 transition">
+                      <Icon className="w-6 h-6 text-primaryBright" />
+                    </div>
+                    <p className="text-sm font-medium">{category.name}</p>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Featured Products */}
       {featured.length > 0 && (
@@ -519,34 +412,6 @@ export default async function HomePage() {
                   </div>
                 </Link>
               ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Categories */}
-      {categories.length > 0 && (
-        <section className="py-16 bg-surface/30">
-          <div className="container-custom">
-            <h2 className="text-2xl font-bold text-center mb-8">
-              Browse by <span className="text-primaryBright">Category</span>
-            </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-              {categories.slice(0, 12).map((category) => {
-                const Icon = categoryIcons[category.name] || BarChart3;
-                return (
-                  <Link
-                    key={category.id}
-                    href={`/marketplace?category=${category.slug}`}
-                    className="bg-surface rounded-card border border-border p-4 text-center hover:border-primaryBright/30 transition hover:scale-[1.02] group"
-                  >
-                    <div className="w-12 h-12 mx-auto rounded-xl bg-primaryBright/10 flex items-center justify-center mb-3 group-hover:bg-primaryBright/20 transition">
-                      <Icon className="w-6 h-6 text-primaryBright" />
-                    </div>
-                    <p className="text-sm font-medium">{category.name}</p>
-                  </Link>
-                );
-              })}
             </div>
           </div>
         </section>
