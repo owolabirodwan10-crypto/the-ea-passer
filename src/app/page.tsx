@@ -1,243 +1,328 @@
-import Link from "next/link";
-import {
-  Search, ShieldCheck, Lock, ArrowRight, Radar, TrendingUp, Layers,
-  Gauge, Coins, Crosshair, BadgeCheck, LineChart, ChevronRight,
-} from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { SiteHeader } from "@/components/layout/SiteHeader";
-import { SiteFooter } from "@/components/layout/SiteFooter";
-import { ProductCard } from "@/components/marketplace/ProductCard";
-import { EmptyState } from "@/components/ui/Primitives";
-import { Button } from "@/components/ui/Button";
+import Link from "next/link";
+import Image from "next/image";
+import { 
+  ArrowRight, 
+  Shield, 
+  Zap, 
+  BarChart3, 
+  Users,
+  Star,
+  TrendingUp,
+  Check,
+  ChevronRight
+} from "lucide-react";
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+// ✅ Define types
+interface Product {
+  id: string;
+  name: string;
+  slug: string;
+  short_description: string | null;
+  price: number | null;
+  sale_price: number | null;
+  platform: string | null;
+  featured: boolean;
+  category: { name: string } | null;
+  images: { url: string; is_main: boolean }[];
+}
 
-const CATEGORY_ICONS: Record<string, typeof Layers> = {
-  "forex-robots": Layers,
-  "mt4-eas": Gauge,
-  "mt5-eas": Gauge,
-  "gold-eas": Coins,
-  "scalping-eas": TrendingUp,
-  "prop-firm-eas": BadgeCheck,
-  "ai-eas": Crosshair,
-  indicators: LineChart,
-};
-
-const STEPS = [
-  { n: "01", t: "Discover", d: "Filter by platform, market and strategy to find EAs that fit how you trade." },
-  { n: "02", t: "Compare", d: "Review pricing, requirements and any performance evidence developers submitted." },
-  { n: "03", t: "Buy", d: "Checkout securely. Your license and download unlock as soon as payment clears." },
-  { n: "04", t: "Activate", d: "Install on your terminal, activate your license, and get update notifications." },
-];
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  icon: string | null;
+}
 
 export default async function HomePage() {
-  let featured = [];
-  let categories = [];
+  // ✅ Explicitly type the arrays
+  let featured: Product[] = [];
+  let categories: Category[] = [];
   let listingCount = 0;
-  
+
   try {
-    const results = await Promise.all([
-      prisma.product.findMany({
-        where: { status: "APPROVED", featured: true },
-        take: 6,
-        orderBy: { approvedAt: "desc" },
-        include: { developer: { include: { user: true } } },
-      }),
-      prisma.productCategory.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" }, take: 8 }),
-      prisma.product.count({ where: { status: "APPROVED" } }),
-    ]);
-    
-    featured = results[0];
-    categories = results[1];
-    listingCount = results[2];
+    // Fetch featured products
+    const featuredProducts = await prisma.product.findMany({
+      where: { 
+        status: "APPROVED",
+        featured: true,
+      },
+      include: {
+        images: {
+          where: { is_main: true },
+          take: 1,
+        },
+        category: true,
+      },
+      take: 6,
+      orderBy: { createdAt: "desc" },
+    });
+    featured = featuredProducts as Product[];
+
+    // Fetch categories
+    const categoriesData = await prisma.productCategory.findMany({
+      where: { active: true },
+      orderBy: { sortOrder: "asc" },
+      take: 6,
+    });
+    categories = categoriesData as Category[];
+
+    // Get total product count
+    listingCount = await prisma.product.count({
+      where: { status: "APPROVED" },
+    });
   } catch (error) {
-    console.error('Error fetching data for homepage:', error);
+    console.error("Error fetching homepage data:", error);
   }
 
-  // Return statement MUST be outside the try/catch
   return (
     <div className="min-h-screen bg-bg text-text">
-      <SiteHeader />
-
-      <div className="mx-auto max-w-[1180px] px-6">
-        <section className="grid grid-cols-1 items-center gap-14 py-16 lg:grid-cols-[1.05fr_0.95fr] lg:py-24">
-          <div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/[0.08] px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-primaryBright">
-              <Radar size={13} /> Forex automation marketplace
-            </span>
-            <h1 className="font-display mt-5 text-[40px] font-bold leading-[1.08] tracking-tight lg:text-[52px]">
-              Find, verify and run <br />
-              <span className="bg-gradient-to-r from-chrome to-primaryBright bg-clip-text text-transparent">
-                the right EA
-              </span>
-              , not just any EA.
-            </h1>
-            <p className="mt-5 max-w-[480px] text-[17px] leading-relaxed text-muted">
-              EAPASER is where traders discover Expert Advisors, developers list and sell their
-              work, and every listing goes through review before it reaches the marketplace.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3.5">
-              <Link href="/marketplace">
-                <Button>
-                  Explore EAs <ArrowRight size={16} />
-                </Button>
-              </Link>
-              <Link href="/developer/products/new">
-                <Button variant="ghost">List Your EA</Button>
-              </Link>
-            </div>
-            <div className="mt-8 flex flex-wrap gap-6 text-[13px] text-muted">
-              <span className="flex items-center gap-2"><ShieldCheck size={15} className="text-success" /> Reviewed before listing</span>
-              <span className="flex items-center gap-2"><Lock size={15} className="text-success" /> Protected downloads</span>
-              <span className="flex items-center gap-2"><BadgeCheck size={15} className="text-success" /> Verified purchase reviews only</span>
-            </div>
-          </div>
-
-          <div className="rounded-card border border-border bg-gradient-to-b from-surface to-[#0c0e14] p-6 shadow-[0_30px_60px_-30px_rgba(0,0,0,0.7)]">
-            <div className="mb-4 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-success shadow-[0_0_8px_#34D399]" />
-                <span className="font-mono text-xs font-semibold uppercase tracking-wide text-muted">
-                  Marketplace status
-                </span>
+      {/* Hero Section */}
+      <section className="relative overflow-hidden py-20 sm:py-32">
+        <div className="container-custom relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primaryBright/10 border border-primaryBright/20 text-primaryBright text-sm font-medium mb-6">
+                <Zap className="w-4 h-4" />
+                Professional Trading Technology
               </div>
-              <span className="rounded-full border border-border px-2.5 py-0.5 text-[11px] text-mutedSoft">Live data</span>
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight">
+                Trade Smarter.
+                <br />
+                <span className="text-primaryBright">Automate With Confidence.</span>
+              </h1>
+              <p className="mt-6 text-lg text-muted max-w-lg">
+                Professional Forex automation, prop-firm solutions and trading technology 
+                designed around disciplined execution and risk management.
+              </p>
+              <div className="mt-8 flex flex-col sm:flex-row gap-4">
+                <Link href="/marketplace" className="btn-primary">
+                  Explore Marketplace
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+                <Link href="/performance" className="btn-secondary">
+                  View Performance
+                </Link>
+              </div>
+              <div className="mt-8 flex items-center gap-6">
+                <div>
+                  <p className="text-2xl font-bold text-white">{listingCount}+</p>
+                  <p className="text-sm text-muted">Trading Systems</p>
+                </div>
+                <div className="w-px h-10 bg-border" />
+                <div>
+                  <p className="text-2xl font-bold text-white">1000+</p>
+                  <p className="text-sm text-muted">Active Traders</p>
+                </div>
+                <div className="w-px h-10 bg-border" />
+                <div>
+                  <p className="text-2xl font-bold text-white">100+</p>
+                  <p className="text-sm text-muted">Active Licenses</p>
+                </div>
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <StatBlock label="Approved listings" value={String(listingCount)} />
-              <StatBlock label="Categories" value={String(categories.length)} />
-            </div>
-            <p className="mt-4 text-[11px] leading-relaxed text-mutedSoft">
-              These numbers come directly from the database. As developers submit EAs and admin
-              review clears them, this panel updates automatically.
-            </p>
-          </div>
-        </section>
-      </div>
-
-      <div className="mx-auto max-w-[1180px] px-6"><div className="ep-signal-line" /></div>
-
-      <div className="mx-auto max-w-[1180px] px-6">
-        <section className="py-16">
-          <SectionHead
-            eyebrow="Browse by category"
-            title="Every kind of strategy, organized the way traders search"
-            desc="Filter by platform, market and style. Every category page supports sorting by rating, price and verification status."
-          />
-          <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-4">
-            {categories.map((c) => {
-              const Icon = CATEGORY_ICONS[c.slug] ?? Layers;
-              return (
-                <Link
-                  key={c.slug}
-                  href={`/marketplace?category=${c.slug}`}
-                  className="rounded-card border border-border bg-surface p-5 transition-colors hover:border-primary/45 hover:bg-surface2"
-                >
-                  <div className="mb-3.5 flex h-9 w-9 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-primaryBright">
-                    <Icon size={17} />
+            <div className="hidden lg:block">
+              <div className="glass p-6 rounded-2xl">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted">Account Equity</p>
+                      <p className="text-2xl font-bold text-white">$124,583.42</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-muted">Daily P/L</p>
+                      <p className="text-2xl font-bold text-success">+$2,847.18</p>
+                    </div>
                   </div>
-                  <div className="text-[14.5px] font-semibold">{c.name}</div>
-                </Link>
-              );
-            })}
-          </div>
-        </section>
-
-        <section className="py-16">
-          <SectionHead eyebrow="Featured EAs" title="Marketplace listings" />
-          {featured.length === 0 ? (
-            <EmptyState
-              icon={Search}
-              title="No EAs published yet"
-              description="Approved listings will appear here automatically as developers submit products and admin review clears them. Nothing is shown here until it is real."
-              action={
-                <Link href="/marketplace">
-                  <Button variant="ghost" size="sm">Browse the marketplace</Button>
-                </Link>
-              }
-            />
-          ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {featured.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={{
-                    slug: product.slug,
-                    name: product.name,
-                    shortDescription: product.shortDescription,
-                    price: product.price.toString(),
-                    currency: product.currency,
-                    platform: product.platform,
-                    verified: product.verified,
-                    ratingAverage: product.ratingAverage.toString(),
-                    ratingCount: product.ratingCount,
-                    developer: {
-                      companyName: product.developer.companyName,
-                      user: { name: product.developer.user.name },
-                    },
-                  }}
-                />
-              ))}
-            </div>
-          )}
-        </section>
-
-        <section className="py-16">
-          <SectionHead eyebrow="How it works" title="From discovery to a running EA" />
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {STEPS.map((s) => (
-              <div key={s.n}>
-                <span className="font-mono mb-3.5 block text-[13px] text-primaryBright">{s.n}</span>
-                <h4 className="mb-2 text-[15.5px] font-semibold">{s.t}</h4>
-                <p className="text-[13.5px] leading-relaxed text-muted">{s.d}</p>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="p-3 bg-white/5 rounded-lg">
+                      <p className="text-xs text-muted">Drawdown</p>
+                      <p className="text-lg font-semibold text-white">8.2%</p>
+                    </div>
+                    <div className="p-3 bg-white/5 rounded-lg">
+                      <p className="text-xs text-muted">Win Rate</p>
+                      <p className="text-lg font-semibold text-primaryBright">67.4%</p>
+                    </div>
+                    <div className="p-3 bg-white/5 rounded-lg">
+                      <p className="text-xs text-muted">Profit Factor</p>
+                      <p className="text-lg font-semibold text-white">1.82</p>
+                    </div>
+                  </div>
+                  <div className="p-3 bg-white/5 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted">Active Trades</span>
+                      <span className="text-sm font-medium text-primaryBright">4</span>
+                    </div>
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="text-xs px-2 py-1 bg-success/20 text-success rounded">EURUSD</span>
+                      <span className="text-xs px-2 py-1 bg-yellow-500/20 text-yellow-500 rounded">XAUUSD</span>
+                      <span className="text-xs px-2 py-1 bg-blue-500/20 text-blue-500 rounded">GBPUSD</span>
+                      <span className="text-xs px-2 py-1 bg-purple-500/20 text-purple-500 rounded">BTCUSD</span>
+                    </div>
+                  </div>
+                  <div className="p-3 bg-white/5 rounded-lg flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-muted">EA Status</p>
+                      <p className="text-sm font-medium text-success">● EAPASSER Active</p>
+                    </div>
+                    <span className="text-xs text-muted">Demo Data</span>
+                  </div>
+                </div>
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Trust Strip */}
+      <section className="py-8 border-y border-border">
+        <div className="container-custom">
+          <div className="flex flex-wrap items-center justify-center gap-8 md:gap-12">
+            {['MT4', 'MT5', 'Forex', 'Gold', 'Indices', 'Prop Firms', 'Automation', 'Risk Management'].map((item) => (
+              <span key={item} className="text-sm font-medium text-muted hover:text-primaryBright transition-colors">
+                {item}
+              </span>
             ))}
           </div>
-        </section>
+        </div>
+      </section>
 
+      {/* Featured Products */}
+      {featured.length > 0 && (
         <section className="py-16">
-          <div className="flex flex-col items-start justify-between gap-8 rounded-[18px] border border-primary/25 bg-gradient-to-br from-primary/[0.14] to-primaryBright/[0.05] p-9 sm:p-13 lg:flex-row lg:items-center">
-            <div>
-              <h3 className="font-display mb-2.5 max-w-[420px] text-[26px] font-bold">
-                Sell your EA to traders who are actually looking
-              </h3>
-              <p className="max-w-[420px] text-[14.5px] leading-relaxed text-muted">
-                Submit for review, set your price, and manage versions and payouts from a
-                developer dashboard built for this market.
-              </p>
+          <div className="container-custom">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h2 className="text-2xl sm:text-3xl font-bold">
+                  Featured <span className="text-primaryBright">Systems</span>
+                </h2>
+                <p className="text-muted mt-2">Premium trading systems trusted by traders worldwide.</p>
+              </div>
+              <Link href="/marketplace" className="text-primaryBright hover:underline flex items-center gap-1">
+                View All
+                <ChevronRight className="w-4 h-4" />
+              </Link>
             </div>
-            <Link href="/developer/products/new" className="shrink-0">
-              <Button>
-                Apply as a developer <ChevronRight size={16} />
-              </Button>
-            </Link>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {featured.map((product) => (
+                <Link
+                  key={product.id}
+                  href={`/product/${product.slug}`}
+                  className="card group overflow-hidden hover:scale-[1.02] transition-all duration-300"
+                >
+                  <div className="relative h-48 bg-surface overflow-hidden">
+                    {product.images && product.images.length > 0 ? (
+                      <Image
+                        src={product.images[0].url}
+                        alt={product.name}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-mutedSoft">
+                        No Image
+                      </div>
+                    )}
+                    {product.featured && (
+                      <span className="absolute top-3 right-3 badge badge-featured">
+                        <Star className="w-3 h-3" />
+                        Featured
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-5">
+                    <div className="flex items-center gap-2 mb-2">
+                      {product.category && (
+                        <span className="badge badge-primary text-xs">
+                          {product.category.name}
+                        </span>
+                      )}
+                      {product.platform && (
+                        <span className="badge badge-gray text-xs">
+                          {product.platform}
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="text-lg font-semibold mb-1">{product.name}</h3>
+                    <p className="text-sm text-muted line-clamp-2">
+                      {product.short_description || "Professional trading system"}
+                    </p>
+                    <div className="mt-4 flex items-center justify-between">
+                      <div>
+                        {product.sale_price ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xl font-bold text-primaryBright">
+                              ${product.sale_price}
+                            </span>
+                            <span className="text-sm text-mutedSoft line-through">
+                              ${product.price}
+                            </span>
+                          </div>
+                        ) : product.price ? (
+                          <span className="text-xl font-bold">
+                            ${product.price}
+                          </span>
+                        ) : (
+                          <span className="text-xl font-bold text-primaryBright">Free</span>
+                        )}
+                      </div>
+                      <span className="text-primaryBright group-hover:translate-x-1 transition-transform">
+                        <ArrowRight className="w-5 h-5" />
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
           </div>
         </section>
-      </div>
+      )}
 
-      <SiteFooter />
-    </div>
-  );
-}
+      {/* Categories */}
+      {categories.length > 0 && (
+        <section className="py-16 bg-surface/30">
+          <div className="container-custom">
+            <h2 className="text-2xl font-bold text-center mb-8">
+              Browse by <span className="text-primaryBright">Category</span>
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+              {categories.map((category) => (
+                <Link
+                  key={category.id}
+                  href={`/marketplace?category=${category.slug}`}
+                  className="bg-surface rounded-card border border-border p-4 text-center hover:border-primaryBright/30 transition hover:scale-[1.02]"
+                >
+                  <div className="text-3xl mb-2">{category.icon || "📊"}</div>
+                  <p className="text-sm font-medium">{category.name}</p>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
-function StatBlock({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="border border-border bg-surface2/40 px-4 py-3.5 rounded-lg">
-      <div className="text-[21px] font-semibold tracking-tight">{value}</div>
-      <div className="text-[11px] text-mutedSoft">{label}</div>
-    </div>
-  );
-}
-
-function SectionHead({ eyebrow, title, desc }: { eyebrow: string; title: string; desc?: string }) {
-  return (
-    <div className="mb-8">
-      <span className="text-xs font-semibold uppercase tracking-wider text-primaryBright">{eyebrow}</span>
-      <h2 className="font-display mt-1.5 text-[26px] font-bold leading-[1.1] tracking-tight sm:text-[30px]">
-        {title}
-      </h2>
-      {desc && <p className="mt-3 max-w-[580px] text-[14.5px] leading-relaxed text-muted">{desc}</p>}
+      {/* CTA Section */}
+      <section className="py-16 bg-gradient-to-br from-brand-blue-charcoal to-brand-blue-charcoal/90">
+        <div className="container-custom text-center">
+          <h2 className="text-3xl font-bold text-white">
+            Ready to Elevate Your Trading?
+          </h2>
+          <p className="text-lg text-muted max-w-2xl mx-auto mt-4">
+            Join thousands of traders using EAPASSER for automated execution,
+            risk management, and consistent performance.
+          </p>
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link href="/marketplace" className="btn-primary">
+              Explore Marketplace
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+            <Link href="/contact" className="btn-secondary border-white/30 text-white hover:bg-white/10">
+              Contact Sales
+            </Link>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
