@@ -1,21 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
-  
-  experimental: {
-    serverComponentsExternalPackages: ['@prisma/client', 'prisma'],
+  // ✅ Enable verbose logging to see the actual error
+  logging: {
+    fetches: {
+      fullUrl: true,
+    },
   },
-  
-  // Add this to skip static generation for all pages
-  staticPageGenerationTimeout: 120,
-  
-  // Skip TypeScript and ESLint during build
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  // ✅ Show full error messages in production (temporarily)
+  productionBrowserSourceMaps: true,
+  // ✅ Disable React strict mode to reduce noise
+  reactStrictMode: false,
 }
 
 module.exports = nextConfig
