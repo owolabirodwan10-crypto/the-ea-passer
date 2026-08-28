@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase"; // ✅ Client-safe import
+import { createBrowserSupabaseClient } from "@/lib/supabase-client";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const supabase = createBrowserSupabaseClient();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
