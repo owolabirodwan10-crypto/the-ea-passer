@@ -1,7 +1,9 @@
 "use client";
 
 import type React from "react";
+import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutGrid,
@@ -10,6 +12,8 @@ import {
   User,
   LogOut,
   Home,
+  Menu,
+  X,
 } from "lucide-react";
 import { createBrowserSupabaseClient } from "@/lib/supabase-client";
 
@@ -27,6 +31,7 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const supabase = createBrowserSupabaseClient();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -35,15 +40,34 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-bg text-text">
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-surface border border-border text-text hover:bg-bg transition"
+      >
+        {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+      </button>
+
       {/* Sidebar */}
-      <aside className="fixed top-0 left-0 h-full w-64 bg-surface border-r border-border p-4 overflow-y-auto">
+      <aside
+        className={`fixed top-0 left-0 h-full w-72 bg-surface border-r border-border p-4 overflow-y-auto transition-transform duration-300 z-40 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        }`}
+      >
         <div className="mb-8">
-          <Link href="/">
-            <h1 className="text-xl font-bold text-primaryBright cursor-pointer hover:opacity-80 transition">
-              EAPASSER
-            </h1>
+          <Link href="/" className="flex items-center gap-3">
+            <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-primaryBright/30 flex-shrink-0">
+              <Image
+                src="/icon.png"
+                alt="EAPASSER"
+                fill
+                className="object-cover"
+                priority
+              />
+            </div>
+            <span className="text-xl font-bold text-primaryBright">EAPASSER</span>
           </Link>
-          <p className="text-sm text-muted mt-1">Dashboard</p>
+          <p className="text-sm text-muted mt-2">Dashboard</p>
         </div>
 
         <nav className="space-y-1">
@@ -54,6 +78,7 @@ export default function DashboardLayout({
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={() => setSidebarOpen(false)}
                 className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition ${
                   isActive
                     ? "bg-primaryBright/10 text-primaryBright"
@@ -61,12 +86,13 @@ export default function DashboardLayout({
                 }`}
               >
                 <Icon className="w-5 h-5" />
-                {item.label}
+                <span>{item.label}</span>
               </Link>
             );
           })}
           <Link
             href="/"
+            onClick={() => setSidebarOpen(false)}
             className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-muted hover:text-text hover:bg-bg transition"
           >
             <Home className="w-5 h-5" />
@@ -82,8 +108,18 @@ export default function DashboardLayout({
         </nav>
       </aside>
 
+      {/* Overlay for mobile */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Main content */}
-      <main className="ml-64 p-8">{children}</main>
+      <main className="lg:ml-72 p-4 sm:p-6 lg:p-8 pt-16 lg:pt-8">
+        {children}
+      </main>
     </div>
   );
 }

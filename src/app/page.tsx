@@ -1,15 +1,21 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import Image from "next/image";
+import { SiteHeader } from "@/components/layout/SiteHeader";
+import { SiteFooter } from "@/components/layout/SiteFooter";
 import { 
   ArrowRight, 
   Zap, 
   Star,
-  ChevronRight
+  ChevronRight,
+  Shield,
+  TrendingUp,
+  Users,
+  BarChart3
 } from "lucide-react";
 
 export default async function HomePage() {
-  // ✅ Fetch featured products with categories
+  // Fetch featured products
   const featuredProducts = await prisma.product.findMany({
     where: { 
       status: "APPROVED",
@@ -22,47 +28,48 @@ export default async function HomePage() {
     orderBy: { createdAt: "desc" },
   });
 
-  // ✅ Fetch categories
+  // Fetch categories
   const categories = await prisma.productCategory.findMany({
     where: { active: true },
     orderBy: { sortOrder: "asc" },
     take: 6,
   });
 
-  // ✅ Get total product count
+  // Get total product count
   const listingCount = await prisma.product.count({
     where: { status: "APPROVED" },
   });
 
-  // ✅ Get images for each product using a single query (more efficient)
-  const productIds = featuredProducts.map(p => p.id);
-  
-  let productImages: any[] = [];
-  if (productIds.length > 0) {
-    try {
-      // ✅ Try to fetch images - if this fails, we just have no images
-      productImages = await prisma.$queryRaw`
-        SELECT * FROM "ProductImage" 
-        WHERE "product_id" IN (${productIds.join(',')}) 
-        AND "is_main" = true
-      ` as any[];
-    } catch (error) {
-      // If the table doesn't exist or query fails, just use empty array
-      productImages = [];
-    }
-  }
-
-  // ✅ Combine products with their images
-  const featured = featuredProducts.map((product) => {
-    const image = productImages.find((img: any) => img.product_id === product.id);
-    return {
-      ...product,
-      images: image ? [{ url: image.url, is_main: true }] : [],
-    };
-  });
+  // Get images for each product
+  const featured = await Promise.all(
+    featuredProducts.map(async (product) => {
+      let mainImage = null;
+      try {
+        const images = await prisma.productImage.findMany({
+          where: { 
+            product_id: product.id,
+            is_main: true,
+          },
+          take: 1,
+        });
+        if (images && images.length > 0) {
+          mainImage = images[0];
+        }
+      } catch (error) {
+        mainImage = null;
+      }
+      
+      return {
+        ...product,
+        images: mainImage ? [{ url: mainImage.url, is_main: true }] : [],
+      };
+    })
+  );
 
   return (
     <div className="min-h-screen bg-bg text-text">
+      <SiteHeader />
+      
       {/* Hero Section */}
       <section className="relative overflow-hidden py-20 sm:py-32">
         <div className="container-custom relative z-10">
@@ -90,7 +97,7 @@ export default async function HomePage() {
                   View Performance
                 </Link>
               </div>
-              <div className="mt-8 flex items-center gap-6">
+              <div className="mt-8 flex flex-wrap items-center gap-6">
                 <div>
                   <p className="text-2xl font-bold text-white">{listingCount}+</p>
                   <p className="text-sm text-muted">Trading Systems</p>
@@ -139,7 +146,7 @@ export default async function HomePage() {
                       <span className="text-sm text-muted">Active Trades</span>
                       <span className="text-sm font-medium text-primaryBright">4</span>
                     </div>
-                    <div className="mt-2 flex items-center gap-2">
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
                       <span className="text-xs px-2 py-1 bg-success/20 text-success rounded">EURUSD</span>
                       <span className="text-xs px-2 py-1 bg-yellow-500/20 text-yellow-500 rounded">XAUUSD</span>
                       <span className="text-xs px-2 py-1 bg-blue-500/20 text-blue-500 rounded">GBPUSD</span>
@@ -163,7 +170,7 @@ export default async function HomePage() {
       {/* Trust Strip */}
       <section className="py-8 border-y border-border">
         <div className="container-custom">
-          <div className="flex flex-wrap items-center justify-center gap-8 md:gap-12">
+          <div className="flex flex-wrap items-center justify-center gap-6 md:gap-12">
             {['MT4', 'MT5', 'Forex', 'Gold', 'Indices', 'Prop Firms', 'Automation', 'Risk Management'].map((item) => (
               <span key={item} className="text-sm font-medium text-muted hover:text-primaryBright transition-colors">
                 {item}
@@ -173,18 +180,62 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* Why EAPASSER */}
+      <section className="py-16">
+        <div className="container-custom">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold">
+              Why <span className="text-primaryBright">EAPASSER</span>
+            </h2>
+            <p className="text-muted mt-2 max-w-2xl mx-auto">
+              Built around professionalism, transparency, and technology.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              {
+                icon: Shield,
+                title: 'Risk-First Approach',
+                description: 'Every system is designed with risk management at its core. No guaranteed profits, just disciplined execution.',
+              },
+              {
+                icon: TrendingUp,
+                title: 'Verified Performance',
+                description: 'Real data, real results. Backtest, demo, and live performance clearly labeled for transparency.',
+              },
+              {
+                icon: Users,
+                title: 'Professional Support',
+                description: 'Continuous development, customer support, and regular updates to keep your systems performing.',
+              },
+            ].map((item, index) => {
+              const Icon = item.icon;
+              return (
+                <div key={index} className="card p-6 text-center hover:scale-[1.02] transition-all duration-300">
+                  <div className="w-14 h-14 mx-auto rounded-2xl bg-primaryBright/10 flex items-center justify-center mb-4">
+                    <Icon className="w-7 h-7 text-primaryBright" />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2">{item.title}</h3>
+                  <p className="text-sm text-muted">{item.description}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
       {/* Featured Products */}
       {featured.length > 0 && (
-        <section className="py-16">
+        <section className="py-16 bg-surface/30">
           <div className="container-custom">
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex flex-wrap items-center justify-between mb-8">
               <div>
                 <h2 className="text-2xl sm:text-3xl font-bold">
                   Featured <span className="text-primaryBright">Systems</span>
                 </h2>
-                <p className="text-muted mt-2">Premium trading systems trusted by traders worldwide.</p>
+                <p className="text-muted mt-1">Premium trading systems trusted by traders worldwide.</p>
               </div>
-              <Link href="/marketplace" className="text-primaryBright hover:underline flex items-center gap-1">
+              <Link href="/marketplace" className="text-primaryBright hover:underline flex items-center gap-1 mt-2 sm:mt-0">
                 View All
                 <ChevronRight className="w-4 h-4" />
               </Link>
@@ -218,7 +269,7 @@ export default async function HomePage() {
                     )}
                   </div>
                   <div className="p-5">
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
                       {product.category && (
                         <span className="badge badge-primary text-xs">
                           {product.category.name}
@@ -234,7 +285,7 @@ export default async function HomePage() {
                     <p className="text-sm text-muted line-clamp-2">
                       {product.short_description || "Professional trading system"}
                     </p>
-                    <div className="mt-4 flex items-center justify-between">
+                    <div className="mt-4 flex flex-wrap items-center justify-between">
                       <div>
                         {product.sale_price ? (
                           <div className="flex items-center gap-2">
@@ -267,7 +318,7 @@ export default async function HomePage() {
 
       {/* Categories */}
       {categories.length > 0 && (
-        <section className="py-16 bg-surface/30">
+        <section className="py-16">
           <div className="container-custom">
             <h2 className="text-2xl font-bold text-center mb-8">
               Browse by <span className="text-primaryBright">Category</span>
@@ -309,6 +360,8 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      <SiteFooter />
     </div>
   );
 }

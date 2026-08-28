@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { createBrowserSupabaseClient } from "@/lib/supabase-client";
 
 function LoginForm() {
@@ -43,36 +44,47 @@ function LoginForm() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-bg px-4">
+    <div className="flex min-h-screen items-center justify-center bg-bg px-4 py-8">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Link href="/">
-            <h1 className="text-4xl font-bold text-primaryBright cursor-pointer hover:opacity-80 transition">EAPASSER</h1>
+          <Link href="/" className="inline-block">
+            <div className="flex items-center justify-center gap-3">
+              <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-primaryBright/30 shadow-lg shadow-primaryBright/10 flex-shrink-0">
+                <Image
+                  src="/icon.png"
+                  alt="EAPASSER"
+                  fill
+                  className="object-cover"
+                  priority
+                />
+              </div>
+              <span className="text-3xl font-bold text-primaryBright">EAPASSER</span>
+            </div>
           </Link>
-          <p className="text-muted mt-2">Sign in to your account</p>
+          <p className="text-muted mt-3">Sign in to your account</p>
         </div>
 
-        <div className="bg-surface p-8 rounded-card border border-border">
+        <div className="bg-surface p-6 sm:p-8 rounded-2xl border border-border shadow-xl">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-muted mb-1">Email</label>
+              <label className="block text-sm font-medium text-muted mb-1.5">Email Address</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-2 rounded-lg bg-bg border border-border text-text placeholder-mutedSoft focus:outline-none focus:border-primaryBright transition"
+                className="w-full px-4 py-3 rounded-lg bg-bg border border-border text-text placeholder-mutedSoft focus:outline-none focus:ring-2 focus:ring-primaryBright/50 transition"
                 placeholder="you@example.com"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-muted mb-1">Password</label>
+              <label className="block text-sm font-medium text-muted mb-1.5">Password</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2 rounded-lg bg-bg border border-border text-text placeholder-mutedSoft focus:outline-none focus:border-primaryBright transition"
+                className="w-full px-4 py-3 rounded-lg bg-bg border border-border text-text placeholder-mutedSoft focus:outline-none focus:ring-2 focus:ring-primaryBright/50 transition"
                 placeholder="••••••••"
                 required
               />
@@ -87,16 +99,20 @@ function LoginForm() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 bg-primaryBright text-bg font-semibold rounded-lg hover:opacity-90 transition disabled:opacity-50"
+              className="w-full py-3 bg-primaryBright text-bg font-semibold rounded-lg hover:opacity-90 transition disabled:opacity-50 text-base"
             >
               {loading ? "Signing in..." : "Sign In"}
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-muted">
-            Don&apos;t have an account?{" "}
-            <Link href="/register" className="text-primaryBright hover:underline">Create one</Link>
-          </p>
+          <div className="mt-6 text-center">
+            <p className="text-sm text-muted">
+              Don't have an account?{" "}
+              <Link href="/register" className="text-primaryBright hover:underline font-medium">
+                Create one
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
     </div>

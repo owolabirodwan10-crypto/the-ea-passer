@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { createBrowserSupabaseClient } from "@/lib/supabase-client";
 
 export default function RegisterPage() {
@@ -45,22 +46,22 @@ export default function RegisterPage() {
 
   if (success) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-bg px-4">
+      <div className="flex min-h-screen items-center justify-center bg-bg px-4 py-8">
         <div className="w-full max-w-md text-center">
-          <div className="bg-surface p-8 rounded-card border border-border">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-success/20 flex items-center justify-center">
-              <svg className="w-8 h-8 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="bg-surface p-8 rounded-2xl border border-border shadow-xl">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-success/20 flex items-center justify-center">
+              <svg className="w-10 h-10 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
             <h2 className="text-2xl font-bold text-text mb-2">Check Your Email</h2>
             <p className="text-muted">
-              We&apos;ve sent a confirmation link to <strong>{email}</strong>.
+              We&apos;ve sent a confirmation link to <strong className="text-text">{email}</strong>.
               Please check your inbox and click the link to activate your account.
             </p>
             <Link
               href="/login"
-              className="mt-6 inline-block px-6 py-2 bg-primaryBright text-bg font-semibold rounded-lg hover:opacity-90 transition"
+              className="mt-6 inline-block px-6 py-3 bg-primaryBright text-bg font-semibold rounded-lg hover:opacity-90 transition"
             >
               Go to Login
             </Link>
@@ -71,46 +72,59 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-bg px-4">
+    <div className="flex min-h-screen items-center justify-center bg-bg px-4 py-8">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-primaryBright">EAPASSER</h1>
-          <p className="text-muted mt-2">Create your account</p>
+          <Link href="/" className="inline-block">
+            <div className="flex items-center justify-center gap-3">
+              <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-primaryBright/30 shadow-lg shadow-primaryBright/10 flex-shrink-0">
+                <Image
+                  src="/icon.png"
+                  alt="EAPASSER"
+                  fill
+                  className="object-cover"
+                  priority
+                />
+              </div>
+              <span className="text-3xl font-bold text-primaryBright">EAPASSER</span>
+            </div>
+          </Link>
+          <p className="text-muted mt-3">Create your account</p>
         </div>
 
-        <div className="bg-surface p-8 rounded-card border border-border">
+        <div className="bg-surface p-6 sm:p-8 rounded-2xl border border-border shadow-xl">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-muted mb-1">Full Name</label>
+              <label className="block text-sm font-medium text-muted mb-1.5">Full Name</label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-2 rounded-lg bg-bg border border-border text-text placeholder-mutedSoft focus:outline-none focus:border-primaryBright transition"
+                className="w-full px-4 py-3 rounded-lg bg-bg border border-border text-text placeholder-mutedSoft focus:outline-none focus:ring-2 focus:ring-primaryBright/50 transition"
                 placeholder="John Doe"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-muted mb-1">Email</label>
+              <label className="block text-sm font-medium text-muted mb-1.5">Email Address</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-2 rounded-lg bg-bg border border-border text-text placeholder-mutedSoft focus:outline-none focus:border-primaryBright transition"
+                className="w-full px-4 py-3 rounded-lg bg-bg border border-border text-text placeholder-mutedSoft focus:outline-none focus:ring-2 focus:ring-primaryBright/50 transition"
                 placeholder="you@example.com"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-muted mb-1">Password</label>
+              <label className="block text-sm font-medium text-muted mb-1.5">Password</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2 rounded-lg bg-bg border border-border text-text placeholder-mutedSoft focus:outline-none focus:border-primaryBright transition"
+                className="w-full px-4 py-3 rounded-lg bg-bg border border-border text-text placeholder-mutedSoft focus:outline-none focus:ring-2 focus:ring-primaryBright/50 transition"
                 placeholder="Min 6 characters"
                 required
                 minLength={6}
@@ -126,18 +140,20 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 bg-primaryBright text-bg font-semibold rounded-lg hover:opacity-90 transition disabled:opacity-50"
+              className="w-full py-3 bg-primaryBright text-bg font-semibold rounded-lg hover:opacity-90 transition disabled:opacity-50 text-base"
             >
               {loading ? "Creating account..." : "Create Account"}
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-muted">
-            Already have an account?{" "}
-            <Link href="/login" className="text-primaryBright hover:underline">
-              Sign in
-            </Link>
-          </p>
+          <div className="mt-6 text-center">
+            <p className="text-sm text-muted">
+              Already have an account?{" "}
+              <Link href="/login" className="text-primaryBright hover:underline font-medium">
+                Sign in
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
     </div>
